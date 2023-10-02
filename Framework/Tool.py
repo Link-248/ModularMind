@@ -1,6 +1,16 @@
 from typing import Callable, Optional
+from abc import ABC, abstractmethod
 
-class Tool():
+class BaseTool(ABC):
+    @abstractmethod
+    def __init__(self):
+        pass
+    
+    @abstractmethod
+    def run(self, *args):
+        pass
+    
+class Tool(BaseTool):
     name: str
     """The unique name of the tool that clearly communicates its purpose."""
     func: Optional[Callable[..., str]]

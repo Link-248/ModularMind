@@ -1,7 +1,19 @@
 from typing import List
 from Tool import Tool
+from abc import ABC, abstractmethod
 
-class PromptTemplate():
+class PromptBase(ABC):
+    
+    @abstractmethod
+    def __init__(self):
+        pass
+    
+    @abstractmethod
+    def format_messages(self):
+        pass
+    
+    
+class PromptTemplate(PromptBase):
      # The template to use
     template: str
     # The list of tools available
