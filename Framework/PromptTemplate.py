@@ -18,6 +18,7 @@ class PromptTemplate(PromptBase):
     template: str
     # The list of tools available
     tools: List[Tool]
+    #a dictionary of input variables to be used in the prompt template and their values
     input_variables: dict[str: any]
     
     def __init__(self, template, tools, input_variables):
