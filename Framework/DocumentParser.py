@@ -1,3 +1,4 @@
+import re
 from typing import Dict, Union
 from pypdf import PdfReader
 from abc import ABC, abstractmethod
@@ -9,19 +10,10 @@ class DocumentParserBase(ABC):
         pass
     
     @abstractmethod
-    def document_breakdown(self):
+    def breakdown_document(self):
         pass
     
 class PDFParser(DocumentParserBase):
-    document: str or PdfReader
-    reader: PdfReader
-    max_tokens: int
-    
-    def __init__(self, document, reader = None, max_tokens = 1000):
-        self.document = document
-        self.reader = reader
-        self.max_tokens = max_tokens
-        
     """
     Extract all bookmarks as a flat dictionary and links them to their content. content is split by token limit
 
@@ -36,7 +28,7 @@ class PDFParser(DocumentParserBase):
     Examples:
         Download the PDF from https://zenodo.org/record/50395 to give it a try
     """
-    def document_breakdown(self, document, reader: PdfReader = None, max_tokens: int = 1000) -> Dict[Union[str, int], str]:
+    def breakdown_document(document, reader: PdfReader = None, max_tokens: int = 1000, only_alphaNumeric: bool = False) -> Dict[Union[str, int], str]:
         if isinstance(document, str):
             pdfReader = PdfReader(document).outline
             reader = PdfReader(document)
@@ -49,7 +41,7 @@ class PDFParser(DocumentParserBase):
             item = bookmarks[i]
             if isinstance(item, list):
                 #recursive call
-                result.update(self.document_breakdown(item, reader))
+                result.update(PDFParser.breakdown_document(item, reader))
             else:
                 page_index = reader.get_destination_page_number(item)
                 bookmark_name = item.title
@@ -71,7 +63,11 @@ class PDFParser(DocumentParserBase):
                 # Extract all pages from the current bookmark up to (but not including) the next bookmark
                 bookmark_content = ""
                 for page in reader.pages[page_index:next_page_index]:
-                    bookmark_content += page.extract_text()
+                    page_text = page.extract_text()
+                    # Remove non-alphabetic characters
+                    if only_alphaNumeric:
+                        page_text = re.sub(r'\W+', ' ', page_text)
+                    bookmark_content += page_text
 
                 # Split the content into chunks of max_tokens
                 tokens = bookmark_content.split()
@@ -80,14 +76,11 @@ class PDFParser(DocumentParserBase):
                     result[f"{bookmark_name}_{j//max_tokens}"] = chunk          
 
         return result
-    
-    def __iter__(self):
-        document_breakdown = self.document_breakdown(self.document, self.reader, self.max_tokens)
-        for brokendown in document_breakdown:
-            yield brokendown
 
 '''Example Usage
-bms =  PDFParser("benefits-booklet.pdf", max_tokens=4000)
+bms =  PDFParser.breakdown_document("benefits-booklet.pdf", max_tokens=4000, only_alphaNumeric=False)
+print(bms)
+
 for bm in bms:
     print(bm)
     print(bms[bm])'''
