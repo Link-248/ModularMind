@@ -1,5 +1,5 @@
 from typing import List
-from Tool import Tool
+import Tool
 from abc import ABC, abstractmethod
 
 class PromptBase(ABC):
@@ -17,7 +17,7 @@ class PromptTemplate(PromptBase):
      # The template to use
     template: str
     # The list of tools available
-    tools: List[Tool]
+    tools: List[Tool.Tool]
     #a dictionary of input variables to be used in the prompt template and their values
     input_variables: dict[str: any]
     
