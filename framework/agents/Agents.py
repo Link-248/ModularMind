@@ -77,7 +77,7 @@ class ChatAgent(AgentBase):
             return response["choices"][0]["message"]["content"]
     
     
-'''from dotenv import load_dotenv
+from dotenv import load_dotenv
 load_dotenv()
 import os
     
@@ -87,6 +87,6 @@ WEBRAFT_API_KEY = os.getenv('WEBRAFT_API_KEY')
 NOVA_API_KEY = os.getenv('NOVA_API_KEY')
 OPEN_AI_BASE = 'https://api.nova-oss.com/v1' #"https://thirdparty.webraft.in/v1" # #"https://thirdparty.webraft.in/v1" #"https://zukijourney.xyzbot.net/v1"  #'https://api.nova-oss.com/v1' #"https://thirdparty.webraft.in/v1" # #"https://api.naga.ac/v1"
 
-llm = ChatAgent(base_url=OPEN_AI_BASE, base_api_key=NOVA_API_KEY, model="gpt-3.5-turbo", useOpenAI=True, stream=False)
+llm = ChatAgent(base_url=OPEN_AI_BASE, base_api_key=NOVA_API_KEY, model="gpt-4", useOpenAI=True, stream=False)
 #llm.run("What is the weather in New York?")
-print(llm.run("What can you tell me about set theory?"))'''
+print(llm.run("What can you tell me about set theory?"))

@@ -28,7 +28,7 @@ class PDFParser(DocumentParserBase):
     Examples:
         Download the PDF from https://zenodo.org/record/50395 to give it a try
     """
-    def breakdown_document(document, reader: PdfReader = None, max_tokens: int = 1000, only_alphaNumeric: bool = False, bookmarks_to_ignore: set = set()) -> Dict[Union[str, int], str]:
+    def breakdown_document(document, reader: PdfReader = None, max_tokens: int = 1000, only_alphaNumeric: bool = False, bookmarks_to_ignore: set = set(), strip_bookmarks: set = set()) -> Dict[Union[str, int], str]:
         if isinstance(document, str):
             pdfReader = PdfReader(document).outline
             reader = PdfReader(document)
@@ -40,12 +40,24 @@ class PDFParser(DocumentParserBase):
         for i in range(len(bookmarks)):
             item = bookmarks[i]
             if isinstance(item, list):
-                #recursive call
-                result.update(PDFParser.breakdown_document(document=item, reader=reader, bookmarks_to_ignore=bookmarks_to_ignore))
+                # Recursive call with updated strip_bookmarks set
+                result.update(PDFParser.breakdown_document(document=item, reader=reader, bookmarks_to_ignore=bookmarks_to_ignore, strip_bookmarks=strip_bookmarks))
             else:
                 page_index = reader.get_destination_page_number(item)
                 bookmark_name = item.title
                 if(bookmark_name.strip().lower() not in {bookmark.lower() for bookmark in bookmarks_to_ignore}): 
+                    
+                    # Check if the bookmark is part of the strip_bookmarks set
+                    if(strip_bookmarks != set() and 
+                    bookmark_name.strip().lower() in {bookmark.lower() for bookmark in strip_bookmarks}):
+                        print("Not skipping: " + bookmark_name)
+                        # If the bookmark is not skipped, add its sub-bookmarks to the strip_bookmarks set
+                        if i + 1 < len(bookmarks) and isinstance(bookmarks[i + 1], list):
+                            strip_bookmarks = strip_bookmarks.union({sub_bookmark.title for sub_bookmark in bookmarks[i + 1]})
+                    else:
+                        print("skip: " + bookmark_name)
+                        continue
+                
                     # Get the page number of the next bookmark
                     if i + 1 < len(bookmarks):
                         next_item = bookmarks[i + 1]
@@ -62,28 +74,51 @@ class PDFParser(DocumentParserBase):
 
                     # Extract all pages from the current bookmark up to (but not including) the next bookmark
                     bookmark_content = ""
-                    for page in reader.pages[page_index:next_page_index]:
+                    for page in reader.pages[page_index:next_page_index+1]:
                         page_text = page.extract_text()
+                        # Locate the bookmark name in the page text
+                        bookmark_start = page_text.find(bookmark_name)
+                        if bookmark_start != -1:
+                            # Extract the text from the bookmark name onwards
+                            page_text = page_text[bookmark_start + len(bookmark_name):]
+                        # Locate the next bookmark name in the page text
+                        if i + 1 < len(bookmarks):
+                            if isinstance(bookmarks[i + 1], dict):
+                                next_bookmark_name = bookmarks[i + 1]['/Title']
+                            elif isinstance(bookmarks[i + 1], list) and len(bookmarks[i + 1]) > 0 and isinstance(bookmarks[i + 1][0], dict):
+                                next_bookmark_name = bookmarks[i + 1][0]['/Title']
+                            else:
+                                next_bookmark_name = ""
+                            next_bookmark_start = page_text.find(next_bookmark_name)
+                            if next_bookmark_start != -1:
+                                # Extract the text up to the next bookmark name
+                                page_text = page_text[:next_bookmark_start]
                         # Remove non-alphabetic characters
                         if only_alphaNumeric:
                             page_text = re.sub(r'\W+', ' ', page_text)
                         bookmark_content += page_text
-
+    
                     # Split the content into chunks of max_tokens
                     tokens = bookmark_content.split()
+                    
+                    
+                    print(page_index, next_page_index, tokens)
                     for j in range(0, len(tokens), max_tokens):
                         chunk = " ".join(tokens[j:j+max_tokens])
-                        print('Adding: ' + f"{bookmark_name}_{j//max_tokens}")
-                        result[f"{bookmark_name}_{j//max_tokens}"] = chunk    
+                        #print('Adding: ' + f"{bookmark_name}_{j//max_tokens}")
+                        result[f"{bookmark_name}_{j//max_tokens}"] = chunk 
+                          
+                    
 
         return result
 
 '''Example Usage'''
-'''bms =  PDFParser.breakdown_document("Rosen, Kenneth H - Discrete mathematics 8th ed.pdf", 
+'''bms =  PDFParser.breakdown_document("RAP.pdf", 
                                     max_tokens=4000, only_alphaNumeric=False, 
-                                    bookmarks_to_ignore={'Answers to Odd-Numbered Exercises', 'End-of-Chapter Material'})
+                                    strip_bookmarks= {'Reasoning via Planning (RAP)'})
+                                    #bookmarks_to_ignore={'Answers to Odd-Numbered Exercises', 'End-of-Chapter Material'})
 
-csv_file = "MathTextbook.csv"
+csv_file = "RAP.csv"
 import pandas as pd
 
 (pd.DataFrame.from_dict(data=bms, orient='index')
