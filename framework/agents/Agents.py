@@ -21,20 +21,20 @@ class ChatAgent(AgentBase):
     model: str
     base_url: str
     base_api_key: str
-    useOpenAI: bool = True
+    useOpenAIBase: bool = True
     temperature: int = 0
     stream: bool = True
     
-    def __init__(self, base_api_key, main_prompt: str = "", model: str = "gpt-3.5-turbo", base_url :str = 'https://api.openai.com/v1', useOpenAI: bool = True, temperature: int = 0, stream: bool = True):
+    def __init__(self, base_api_key, main_prompt: str = "", model: str = "gpt-3.5-turbo", base_url :str = 'https://api.openai.com/v1', useOpenAIBase: bool = True, temperature: int = 0, stream: bool = True):
         self.main_prompt=main_prompt
         self.base_url = base_url
         self.base_api_key = base_api_key
-        self.useOpenAI = useOpenAI
+        self.useOpenAIBase = useOpenAIBase
         self.model = model
         self.temperature = temperature
         self.stream = stream
         
-        if(useOpenAI):
+        if not useOpenAIBase:
             openai.api_base = base_url
             openai.api_key =  base_api_key
         
@@ -87,6 +87,6 @@ WEBRAFT_API_KEY = os.getenv('WEBRAFT_API_KEY')
 NOVA_API_KEY = os.getenv('NOVA_API_KEY')
 OPEN_AI_BASE = 'https://api.nova-oss.com/v1' #"https://thirdparty.webraft.in/v1" # #"https://thirdparty.webraft.in/v1" #"https://zukijourney.xyzbot.net/v1"  #'https://api.nova-oss.com/v1' #"https://thirdparty.webraft.in/v1" # #"https://api.naga.ac/v1"
 
-llm = ChatAgent(base_url=OPEN_AI_BASE, base_api_key=NOVA_API_KEY, model="gpt-4", useOpenAI=True, stream=False)
+llm = ChatAgent(base_url=OPEN_AI_BASE, base_api_key=NOVA_API_KEY, model="gpt-4", useOpenAIBase=False, stream=False)
 #llm.run("What is the weather in New York?")
-print(llm.run("What can you tell me about set theory?"))
+#print(llm.run())

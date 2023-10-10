@@ -2,6 +2,7 @@ import re
 from typing import Dict, Union
 from pypdf import PdfReader
 from abc import ABC, abstractmethod
+import pandas as pd
 
 class DocumentParserBase(ABC):
     
@@ -135,18 +136,19 @@ class PDFParser(DocumentParserBase):
         
         # Return the list of bookmarks
         return bookmarks
+    
+    def save_to_csv(data_dict: dict, file_name: str):
+        csv_file = file_name
+
+        (pd.DataFrame.from_dict(data=data_dict, orient='index').to_csv(csv_file, header=False))
 
 '''Example Usage'''
 '''bms =  PDFParser.breakdown_document("RAP.pdf", 
                                     max_tokens=4000, only_alphaNumeric=False, 
                                     strip_bookmarks={'Reasoning via Planning (RAP)'})
                                     #bookmarks_to_ignore={'Answers to Odd-Numbered Exercises', 'End-of-Chapter Material'})
+PDFParser.save_to_csv(bms, "RAP.csv")'''
 
-csv_file = "RAP.csv"
-import pandas as pd
-
-(pd.DataFrame.from_dict(data=bms, orient='index')
-   .to_csv(csv_file, header=False))'''
 '''print(bms)
 
 for bm in bms:
