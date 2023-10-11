@@ -179,7 +179,7 @@ class TextEmbeddings():
             raise ValueError('None of the tried encodings work')
 
 
-from dotenv import load_dotenv
+'''from dotenv import load_dotenv
 load_dotenv()
 import os
 from DocumentParser import PDFParser
@@ -191,10 +191,10 @@ NOVA_API_KEY = os.getenv('NOVA_API_KEY')
 OPENAI_KEY = os.getenv('OPENAI_API_KEY')
 OPEN_AI_BASE = 'https://api.naga.ac/v1' #"https://zukijourney.xyzbot.net/v1"  #'https://api.nova-oss.com/v1' #"https://thirdparty.webraft.in/v1" # #"https://api.naga.ac/v1"
 
-'''bms = PDFParser.breakdown_document("RAP.pdf", 
+bms = PDFParser.breakdown_document("RAP.pdf", 
                                     max_tokens=4000, only_alphaNumeric=False, 
-                                    strip_bookmarks={'Reasoning via Planning (RAP)'})'''
-'''                                    
+                                    strip_bookmarks={'Reasoning via Planning (RAP)'})
+                                 
 embeddings = TextEmbeddings(base_api_key=OPENAI_KEY,  useOpenAIBase=False)
 
 input_datapath = "addresses.csv"  
