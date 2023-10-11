@@ -89,4 +89,4 @@ OPEN_AI_BASE = 'https://api.nova-oss.com/v1' #"https://thirdparty.webraft.in/v1"
 
 llm = ChatAgent(base_url=OPEN_AI_BASE, base_api_key=NOVA_API_KEY, model="gpt-4", useOpenAIBase=False, stream=False)
 #llm.run("What is the weather in New York?")
-#print(llm.run())
+print(llm.run("Explain to me embeddings and vector databases"))

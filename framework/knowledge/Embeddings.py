@@ -1,3 +1,4 @@
+from time import sleep
 import openai
 import pandas as pd
 import chardet
@@ -26,20 +27,55 @@ class TextEmbeddings():
             openai.api_key = base_api_key
         
     def get_embedding(self, text, model: str ='text-embedding-ada-002'):
-        response = openai.Embedding.create(input = text, model=model)
+        # create embeddings (try-except added to avoid RateLimitError)
+        try:
+            response = openai.Embedding.create(input = text, model=model)
+        except:
+            done = False
+            count = 0
+            while not done or count == 5 :
+                sleep(5)
+                count += 1
+                try:
+                    response = openai.Embedding.create(input = text, model=model)
+                    done = True
+                except:
+                    pass
+        
         return response['data'][0]['embedding']
+    
+    def preset_csv_to_embeds_csv(self, data_path: str, output_path: str, model: str ='text-embedding-ada-002'):
+        # load & inspect dataset
+        input_datapath = data_path  # to save space, we provide a pre-filtered dataset
+        df = pd.read_csv(input_datapath)
+        df.drop(columns=df.columns[0], axis=1, inplace=True)
+
+        # Apply the lambda function to get the embeddings and add them to the DataFrame
+        df["embeddings"] = df['content'].apply(lambda x: list(self.get_embedding(x, model=model)))
+        
+        # Save the DataFrame to a CSV file
+        df.to_csv(output_path, index=False)
+    
+    def dict_to_embeds_csv(self, data_dict: dict, output_path: str, model: str ='text-embedding-ada-002'):
+        df = pd.DataFrame(list(data_dict.items()), columns=['topic', 'content'])
+        
+        # Create a new DataFrame with 'topic' as the first column
+        df_embeddings = pd.DataFrame(df['content'])
+
+        # Apply the lambda function to get the embeddings and add them to the DataFrame
+        df_embeddings['embeddings'] = df['content'].apply(lambda x: list(self.get_embedding(x, model=model)))
+        
+        # Save the DataFrame to a CSV file
+        df_embeddings.to_csv(output_path, index=False)
     
     def preset_csv_to_embeds_dict(self, data_path: str, model: str ='text-embedding-ada-002'):
         # load & inspect dataset
         input_datapath = data_path  # to save space, we provide a pre-filtered dataset
-        df = pd.read_csv(input_datapath, header=None)
-        df.columns = ['topic', 'content']
+        df = pd.read_csv(input_datapath)
+        df.drop(columns=df.columns[0], axis=1, inplace=True)
         
         # Create a new DataFrame with 'topic' as the first column
         df_embeddings = pd.DataFrame(df['topic'])
-
-        # Embed the topics
-        #df_embeddings['topic_embedding'] = df['topic'].apply(lambda x: str(embeddings.get_embedding(x)))
 
         # Apply the lambda function to get the embeddings and add them to the DataFrame
         df_embeddings = df_embeddings.join(df['content'].apply(lambda x: list(self.get_embedding(x, model=model))))
@@ -51,56 +87,21 @@ class TextEmbeddings():
             embeds[content[i]] = (list(str(df_embeddings.loc[i,'content']).strip('[').strip(']').split(', ')))
         return embeds
     
-    def preset_csv_to_embeds_csv(self, data_path: str, output_path: str, model: str ='text-embedding-ada-002'):
-        # load & inspect dataset
-        input_datapath = data_path  # to save space, we provide a pre-filtered dataset
-        df = pd.read_csv(input_datapath, header=None)
-        df.columns = ['topic', 'content']
-        
-        # Create a new DataFrame with 'content' as the first column
-        df_embeddings = pd.DataFrame(df['content'])
-
-        # Embed the topics
-        #df_embeddings['topic_embedding'] = df['topic'].apply(lambda x: str(embeddings.get_embedding(x)))
-
-        # Apply the lambda function to get the embeddings and add them to the DataFrame
-        df_embeddings["embeddings"] = df['content'].apply(lambda x: list(self.get_embedding(x, model=model)))
-        
-        # Save the DataFrame to a CSV file
-        df_embeddings.to_csv(output_path, index=False)
-    
-    def dict_to_embeds_csv(self, data_dict: dict, output_path: str, model: str ='text-embedding-ada-002'):
-        df = pd.DataFrame(list(data_dict.items()), columns=['topic', 'content'])
-        
-        # Create a new DataFrame with 'topic' as the first column
-        df_embeddings = pd.DataFrame(df['content'])
-
-        # Embed the topics
-        #df_embeddings['topic_embedding'] = df['topic'].apply(lambda x: str(embeddings.get_embedding(x)))
-
-        # Apply the lambda function to get the embeddings and add them to the DataFrame
-        df_embeddings['embeddings'] = df['content'].apply(lambda x: list(self.get_embedding(x, model=model)))
-        
-        # Save the DataFrame to a CSV file
-        df_embeddings.to_csv(output_path, index=False)
-    
     def dict_to_embeds_dict(self, data_dict: dict, model: str ='text-embedding-ada-002'):
         df = pd.DataFrame(list(data_dict.items()), columns=['topic', 'content'])
-        
+        print(df)
         # Create a new DataFrame with 'topic' as the first column
         df_embeddings = pd.DataFrame(df['topic'])
 
-        # Embed the topics
-        #df_embeddings['topic_embedding'] = df['topic'].apply(lambda x: str(embeddings.get_embedding(x)))
-
         # Apply the lambda function to get the embeddings and add them to the DataFrame
         df_embeddings = df_embeddings.join(df['content'].apply(lambda x: list(self.get_embedding(x, model=model))))
-        topics = df_embeddings['topic'].tolist()
+        content = df['content'].tolist()
         
         #Save the DataFrame to a dict of NL topic and embedding key value pairs
         embeds = dict()
         for i in range(df_embeddings.index.size):
-            embeds[topics[i]] = (list(str(df_embeddings.loc[i,'content']).strip('[').strip(']').split(', ')))
+            embeds[content[i]] = (list(str(df_embeddings.loc[i,'content']).strip('[').strip(']').split(', ')))
+            print(content[i],embeds[content[i]])
         return embeds
     
     def unfiltered_csv_to_embeds_csv(self, data_path: str, output_path: str, model: str ='text-embedding-ada-002'):
@@ -141,7 +142,7 @@ class TextEmbeddings():
         raise ValueError('None of the tried encodings work')
 
 
-from dotenv import load_dotenv
+'''from dotenv import load_dotenv
 load_dotenv()
 import os
 from DocumentParser import PDFParser
@@ -153,11 +154,13 @@ NOVA_API_KEY = os.getenv('NOVA_API_KEY')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 OPEN_AI_BASE = 'https://api.naga.ac/v1' #"https://zukijourney.xyzbot.net/v1"  #'https://api.nova-oss.com/v1' #"https://thirdparty.webraft.in/v1" # #"https://api.naga.ac/v1"
 
-'''bms = PDFParser.breakdown_document("RAP.pdf", 
-                                    max_tokens=4000, only_alphaNumeric=False, 
-                                    strip_bookmarks={'Reasoning via Planning (RAP)'})'''
+bms = PDFParser.breakdown_document("RAP.pdf", 
+                                   max_tokens=4000, only_alphaNumeric=False, 
+                                    strip_bookmarks={'Reasoning via Planning (RAP)'})
                                  
 embeddings = TextEmbeddings(base_api_key=OPENAI_API_KEY, useOpenAIBase=True)
 
-input_datapath = "addresses.csv"  
-embeddings.unfiltered_csv_to_embeds_csv(data_path=input_datapath, output_path='output.csv', model='text-embedding-ada-002')
+input_datapath = "RAP.csv"  
+#embeddings.preset_csv_to_embeds_dict(data_path=input_datapath, model='text-embedding-ada-002')
+#embeddings.dict_to_embeds_dict(data_dict=bms, model='text-embedding-ada-002')
+embeddings.get_embedding("Hello World", model='text-embedding-ada-002')'''

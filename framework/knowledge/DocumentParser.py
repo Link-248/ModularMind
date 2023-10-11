@@ -139,8 +139,14 @@ class PDFParser(DocumentParserBase):
     
     def save_to_csv(data_dict: dict, file_name: str):
         csv_file = file_name
-
-        (pd.DataFrame.from_dict(data=data_dict, orient='index').to_csv(csv_file, header=False))
+        df = pd.DataFrame(
+            data={'topic': list(data_dict.keys()), 'content': list(data_dict.values())},
+        )
+        #df = pd.DataFrame.from_dict(data=data_dict, orient='index')
+        #df.drop(columns=df.columns[0], axis=1, inplace=True)
+        #df.columns = ['content']
+        df.to_csv(csv_file, header=True)
+        
 
 '''Example Usage'''
 '''bms =  PDFParser.breakdown_document("RAP.pdf", 
