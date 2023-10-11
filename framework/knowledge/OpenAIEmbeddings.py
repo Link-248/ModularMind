@@ -2,8 +2,9 @@ from time import sleep
 import openai
 import pandas as pd
 import chardet
+from abc import ABC, abstractmethod
 
-class TextEmbeddings():
+class OpenAIEmbeddings(ABC):
     """
     OpenAI Embeddings model, convert multiple data set types to multiple embedding data set types
     """
@@ -14,6 +15,7 @@ class TextEmbeddings():
     embedding_encoding = "cl100k_base"  # this the encoding for text-embedding-ada-002
     max_tokens = 8000  # the maximum for text-embedding-ada-002 is 8191
     
+    @abstractmethod
     def __init__(self, base_api_key, model: str = "text-embedding-ada-002", base_url :str = 'https://api.openai.com/v1', useOpenAIBase: bool = True):
         self.base_url = base_url
         self.base_api_key = base_api_key
@@ -25,7 +27,7 @@ class TextEmbeddings():
             openai.api_key =  base_api_key
         else:
             openai.api_key = base_api_key
-        
+    
     def get_embedding(self, text, model: str ='text-embedding-ada-002'):
         # create embeddings (try-except added to avoid RateLimitError)
         try:
@@ -44,6 +46,11 @@ class TextEmbeddings():
         
         return response['data'][0]['embedding']
     
+class TextEmbeddings(OpenAIEmbeddings):
+    
+    def __init__(self, base_api_key, model: str = "text-embedding-ada-002", base_url :str = 'https://api.openai.com/v1', useOpenAIBase: bool = True):
+        super().__init__(base_api_key, model, base_url, useOpenAIBase)
+        
     def preset_csv_to_embeds_csv(self, data_path: str, output_path: str, model: str ='text-embedding-ada-002'):
         # load & inspect dataset
         input_datapath = data_path  # to save space, we provide a pre-filtered dataset
@@ -155,12 +162,12 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 OPEN_AI_BASE = 'https://api.naga.ac/v1' #"https://zukijourney.xyzbot.net/v1"  #'https://api.nova-oss.com/v1' #"https://thirdparty.webraft.in/v1" # #"https://api.naga.ac/v1"
 
 bms = PDFParser.breakdown_document("RAP.pdf", 
-                                   max_tokens=4000, only_alphaNumeric=False, 
-                                    strip_bookmarks={'Reasoning via Planning (RAP)'})
+                                max_tokens=4000, only_alphaNumeric=False, 
+                                strip_bookmarks={'Reasoning via Planning (RAP)'})
                                  
 embeddings = TextEmbeddings(base_api_key=OPENAI_API_KEY, useOpenAIBase=True)
 
 input_datapath = "RAP.csv"  
-#embeddings.preset_csv_to_embeds_dict(data_path=input_datapath, model='text-embedding-ada-002')
+embeddings.preset_csv_to_embeds_csv(data_path=input_datapath, output_path='output.csv', model='text-embedding-ada-002')
 #embeddings.dict_to_embeds_dict(data_dict=bms, model='text-embedding-ada-002')
-embeddings.get_embedding("Hello World", model='text-embedding-ada-002')'''
+print(embeddings.get_embedding("Hello World", model='text-embedding-ada-002'))'''
