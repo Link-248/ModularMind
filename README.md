@@ -1,2 +1,10 @@
-# llm_agent_framework_lite
- A lightweight and customizable agent framework (IN PROGRESS)
+# LLM Agent Framework Lite
+## **(IN PROGRESS)**
+### A lightweight and customizable agent framework 
+
+![ALT TEXT](/images/Agent_framework.png)
+
+
+# Blocks:
+## Knowledge:
+![ALT TEXT](/images/Knowledge_block.png)
