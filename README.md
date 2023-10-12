@@ -5,6 +5,6 @@
 ![ALT TEXT](/images/Agent_framework.png)
 
 
-# Blocks:
-## Knowledge:
+# Blocks: The building blocks of an agent
+## Knowledge: Easily giving your agent a knowledge base.
 ![ALT TEXT](/images/Knowledge_block.png)
