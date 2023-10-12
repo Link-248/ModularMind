@@ -50,7 +50,8 @@ class TextEmbeddings(OpenAIEmbeddings):
     
     def __init__(self, base_api_key, model: str = "text-embedding-ada-002", base_url :str = 'https://api.openai.com/v1', useOpenAIBase: bool = True):
         super().__init__(base_api_key, model, base_url, useOpenAIBase)
-        
+    
+    # Convert a [topic, content] CSV file to a [topic, content, embeddings] CSV file 
     def preset_csv_to_embeds_csv(self, data_path: str, output_path: str, model: str ='text-embedding-ada-002'):
         # load & inspect dataset
         input_datapath = data_path  # to save space, we provide a pre-filtered dataset
@@ -63,6 +64,7 @@ class TextEmbeddings(OpenAIEmbeddings):
         # Save the DataFrame to a CSV file
         df.to_csv(output_path, index=False)
     
+    # Convert a {topic:content} dict to a [topic, content, embeddings] CSV file
     def dict_to_embeds_csv(self, data_dict: dict, output_path: str, model: str ='text-embedding-ada-002'):
         df = pd.DataFrame(list(data_dict.items()), columns=['topic', 'content'])
         
@@ -75,6 +77,7 @@ class TextEmbeddings(OpenAIEmbeddings):
         # Save the DataFrame to a CSV file
         df_embeddings.to_csv(output_path, index=False)
     
+    # Convert a [topic, content] CSV file to a {content:embeddings} dict
     def preset_csv_to_embeds_dict(self, data_path: str, model: str ='text-embedding-ada-002'):
         # load & inspect dataset
         input_datapath = data_path  # to save space, we provide a pre-filtered dataset
@@ -94,6 +97,7 @@ class TextEmbeddings(OpenAIEmbeddings):
             embeds[content[i]] = (list(str(df_embeddings.loc[i,'content']).strip('[').strip(']').split(', ')))
         return embeds
     
+    # Convert a {topic:content} dict to a {content:embeddings} dict
     def dict_to_embeds_dict(self, data_dict: dict, model: str ='text-embedding-ada-002'):
         df = pd.DataFrame(list(data_dict.items()), columns=['topic', 'content'])
         print(df)
@@ -111,6 +115,7 @@ class TextEmbeddings(OpenAIEmbeddings):
             print(content[i],embeds[content[i]])
         return embeds
     
+    # Convert an unfiltered CSV file to a CSV file with a new embeddings cell for each contnt cell
     def unfiltered_csv_to_embeds_csv(self, data_path: str, output_path: str, model: str ='text-embedding-ada-002'):
         # Read the file with the detected encoding
         try:
@@ -138,6 +143,7 @@ class TextEmbeddings(OpenAIEmbeddings):
         # Save the DataFrame to a CSV file
         df_embeddings.to_csv(output_path, index=False)
 
+    # Detect the encoding of a CSV file
     def try_encodings(data_path):
         encodings = ['utf-8', 'iso-8859-1', 'windows-1252']  # Add more encodings if necessary
         for enc in encodings:

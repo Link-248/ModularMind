@@ -1,0 +1,6 @@
+{
+    "python.analysis.extraPaths": [
+        "./framework/knowledge/embeddings",
+        "./framework/knowledge/vector stores"
+    ]
+}

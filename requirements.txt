@@ -2,3 +2,4 @@ pypdf==3.16.2
 termcolor==2.3.0
 pandas==2.1.1
 chardet==5.2.0
+pinecone==2.2.4
