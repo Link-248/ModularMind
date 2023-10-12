@@ -9,7 +9,7 @@ from pinecone.core.client.model.sparse_values import SparseValues
 class Pinecone():
     index: pinecone.Index
     
-    def __init__(self, api_key: str, index_name: str, environment: str = 'gcp-starter', dimension: int = 1536):
+    def __init__(self, api_key: str, index_name: str, environment: str = 'gcp-starter', dimension: int = 1536, metric: str = 'cosine'):
         # set index name to all lower cases and change any non-alphanumeric characters to dashes
         index_name = index_name.lower()
         index_name = re.sub('[^0-9a-zA-Z]+', '-', index_name)
@@ -21,7 +21,11 @@ class Pinecone():
         )    
         # check if index already exists (only create index if not)
         if index_name not in pinecone.list_indexes():
-            self.index = pinecone.create_index(index_name, dimension=dimension)
+            self.index = pinecone.create_index(
+                                    index_name, 
+                                    dimension=dimension,
+                                    metric=metric,
+                                    )
         # connect to index
         self.index = pinecone.Index(index_name)
     
@@ -56,3 +60,17 @@ class Pinecone():
               sparse_vector: Optional[Union[SparseValues, Dict[str, Union[List[float], List[int]]]]] = None,
               **kwargs):
         return self.index.query(vector=vector, id=id, queries=queries, top_k=top_k, namespace=namespace, filter=filter, include_values=include_values, include_metadata=include_metadata, sparse_vector=sparse_vector, **kwargs)
+
+    def get_top_k_responses(self, 
+                            metadata_to_get: str,
+                            top_k: int,
+                            res):
+        #check if top_k is a valid number
+        if top_k > len(res['matches']):
+            raise Exception(f"Top k: {top_k} is greater than the number of responses: {len(res['matches'])}")
+        
+        #add responses to dictionary
+        responses = {}
+        for i in range(top_k):
+            responses[f"{res['matches'][i]['score']:.2f}"] = {res['matches'][i]['metadata'][metadata_to_get]}
+        return responses

@@ -1,5 +1,5 @@
 from typing import List
-import Tool
+import framework.blocks.tools.Tool as Tool
 from abc import ABC, abstractmethod
 
 class PromptBase(ABC):
