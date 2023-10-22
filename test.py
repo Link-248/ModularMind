@@ -1,5 +1,10 @@
+import framework.agents.AlgorithmOfThought.modelProcesses as mp
+
+models = mp.ModelProcesses("OpenAI")
+print(models.generate_text("What is the meaning of life?"))
+
 #Vector store + embeddings test 
-from framework.blocks.knowledge.vectorStores.Pinecone import Pinecone
+'''from framework.blocks.knowledge.vectorStores.Pinecone import Pinecone
 from framework.blocks.knowledge.embeddings.OpenAIEmbeddings import TextEmbeddings
 import os
 from dotenv import load_dotenv
@@ -33,15 +38,4 @@ xq = embedding.get_embedding(query)
 res = vector_store.query([xq], top_k=5, include_metadata=True)
 print(vector_store.get_top_k_responses(metadata_to_get='content', res=res, top_k=2))
 
-#print(f"{res['matches'][0]['score']:.2f}: {res['matches'][0]['metadata']['content']}")
-'''
-response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=([
-            { "role": "system", "content": f"Here is Context: {vector_store.get_top_k_responses(metadata_to_get='content', res=res, top_k=2)}"},
-            { "role": "user", "content": query },
-            ]),
-            temperature=0,
-            stream=False) 
-
-print(response["choices"][0]["message"]["content"])'''
+#print(f"{res['matches'][0]['score']:.2f}: {res['matches'][0]['metadata']['content']}")'''

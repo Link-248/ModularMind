@@ -4,7 +4,8 @@ import openai
 from termcolor import colored
 import tiktoken
 import os
-
+from enum import Enum
+        
 class ModelBase(ABC):
     
     @abstractmethod
@@ -24,24 +25,27 @@ class OpenAI(ModelBase):
     chatEncoding: object
     strategy: str
     evaluation_strategy: str
+    base_api_key: str
+    base_url :str
         
     def __init__(self, 
                  base_api_key: str = "", 
                  chatEncoding = tiktoken.get_encoding("cl100k_base"), 
                  model: str = "gpt-3.5-turbo", 
                  base_url :str = 'https://api.openai.com/v1', 
-                 useOpenAIBase: bool = True, 
                  stream: bool = True,
                  strategy="cot",
                  evaluation_strategy="value",):
         
-        self.useOpenAIBase = useOpenAIBase
         self.model = model
         self.stream = stream
         self.chatEncoding = chatEncoding
         
         if base_api_key == "" or base_api_key is None:
+            from dotenv import load_dotenv
+            load_dotenv()
             base_api_key = os.environ.get("OPENAI_API_KEY", "")
+            print('Using OpenAI API Key from environment variable')
         
         openai.api_base = base_url
         openai.api_key =  base_api_key
@@ -96,7 +100,7 @@ class OpenAI(ModelBase):
         else:
             return response["choices"][0]["message"]["content"]
         
-    def run(self, query, system_prompt: str = "", max_tokens: int = 1000, temperature: int = 0, stop=None):
+    def run(self, query, system_prompt: str = "", max_tokens: int = 1000, temperature: int = 0, stop=None, k: int = 1):
         while True:
             try:
                 messages = [
@@ -109,6 +113,7 @@ class OpenAI(ModelBase):
                     max_tokens=max_tokens,
                     temperature=temperature,
                     stop=stop,
+                    n=k,
                     )
                 with open("openai.logs", "a") as log_file:
                     log_file.write(
@@ -122,8 +127,19 @@ class OpenAI(ModelBase):
                     f"{str(e)}, sleep for {sleep_duration}s, set it by env OPENAI_RATE_TIMEOUT"
                 )
                 time.sleep(sleep_duration)
+
+class Models(Enum):
+    OpenAI = OpenAI()
     
-   
+    @staticmethod
+    def get_Model(model_name: str):
+        for model in Models:
+            if model.name == model_name:
+                return model.value
+        return None
+        
+         
+'''
 from dotenv import load_dotenv
 load_dotenv()
 import os
@@ -136,4 +152,4 @@ OPEN_AI_BASE = 'https://api.nova-oss.com/v1' #"https://thirdparty.webraft.in/v1"
 
 llm = OpenAI(model="gpt-3.5-turbo", stream=True)
 #llm.run("What is the weather in New York?")
-print(llm.run(query="Explain to me embeddings and vector databases", max_tokens=400, temperature=0.0, stop=None))
+print(llm.run(query="Explain to me embeddings and vector databases", max_tokens=400, temperature=0.0, stop=None))'''
