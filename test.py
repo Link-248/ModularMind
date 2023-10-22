@@ -34,11 +34,11 @@ res = vector_store.query([xq], top_k=5, include_metadata=True)
 print(vector_store.get_top_k_responses(metadata_to_get='content', res=res, top_k=2))
 
 #print(f"{res['matches'][0]['score']:.2f}: {res['matches'][0]['metadata']['content']}")
-    
-'''response = openai.ChatCompletion.create(
+'''
+response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=([
-            { "role": "system", "content": f"Here is Context: {res['matches'][0]['score']:.2f}: {res['matches'][0]['metadata']['content']}"},
+            { "role": "system", "content": f"Here is Context: {vector_store.get_top_k_responses(metadata_to_get='content', res=res, top_k=2)}"},
             { "role": "user", "content": query },
             ]),
             temperature=0,
