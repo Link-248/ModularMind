@@ -101,6 +101,7 @@ class AoTAgent():
         backtracking_threshold: float = BACKTRACKING_THRESHOLD,
         initial_prompt: str = None,
         thought_cache: Dict[str, Any] = None,
+        valid_retry_count: int = 1,
     ):
         """Init method for AoT"""
         if thought_cache is None:
@@ -121,6 +122,8 @@ class AoTAgent():
         
         self.best_state = None
         self.best_value = float('-inf')
+        
+        self.valid_retry_count = valid_retry_count
 
     def solve(self) -> str:
         """Solve the problem using AoT prompt and dfs search algorithm"""
@@ -150,7 +153,7 @@ class AoTAgent():
             with open("./thought_cache.json", "a") as json_file:
                 json.dump(self.thought_cache, json_file)'''
 
-            return solution if solution else best_state
+            return solution if solution != '' else best_state
 
         except Exception as error:
             logger.error(f"Error in tot_dfs: {error}")
@@ -198,8 +201,16 @@ class AoTAgent():
         elif state in self.thought_cache["pruned"]:
             return
         else:
-            print(colored("Step: " + str(step), "red"))
-            thoughts = self.generate_and_filter_thoughts(state)
+            retry_count = 0
+            while retry_count < self.valid_retry_count:
+                print(colored("Step: " + str(step), "red"))
+                thoughts = self.generate_and_filter_thoughts(state)
+                # Check if any thought has a value above the threshold
+                if any(self.evaluated_thoughts[thought] > self.value_threshold for thought in thoughts):
+                    break
+                retry_count += 1
+            #print(colored("Step: " + str(step), "red"))
+            #thoughts = self.generate_and_filter_thoughts(state)
 
          # Find the thought with the highest value and add it to the output list
         if thoughts:

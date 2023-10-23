@@ -88,7 +88,7 @@ class ModelProcesses():
             Be simple. Be direct. Provide intuitive solutions as soon as you think of them."""
            
             answer = self.generate_text(prompt=prompt, max_tokens=2048, temperature=0)
-            if not answer:  # Check if the answer is empty
+            if not answer or answer == '':  # Check if the answer is empty
                 raise ValueError("No solution generated")
             logger.info(colored(f"Generated Solution Summary {answer}", "green"))
             return answer

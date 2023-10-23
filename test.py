@@ -44,13 +44,13 @@ OPEN_AI_BASE = 'https://api.nova-oss.com/v1' #"https://thirdparty.webraft.in/v1"
 #openai.api_base = OPEN_AI_BASE
 
 dfs = AoTAgent(
-    model="gpt-4",
     num_thoughts=2,
-    max_steps=3,
-    value_threshold=0.6,
+    max_steps=5,
+    value_threshold=0.7,
     initial_prompt=task,
     api_base=OPEN_AI_BASE,
     api_key=NOVA_API_KEY,
+    valid_retry_count=3,
 )
 
 result = dfs.solve()
