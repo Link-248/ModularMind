@@ -53,17 +53,21 @@ class OpenAI(ModelBase):
         self.strategy = strategy
         self.evaluation_strategy = evaluation_strategy
         
-    
-    def run_with_token_count(self, 
+    def set_api_info(self, base_api_key: str = "", base_url :str = 'https://api.openai.com/v1'):
+        openai.api_base = base_url
+        openai.api_key =  base_api_key
+        
+    def run_with_streaming(self, 
                          query: str,
                          system_prompt: str = "", 
                          show_token_consumption: bool = True, 
                          total_session_tokens: int = 0,
                          temperature: int = 0,
                          max_tokens: int = 1000,
+                         k:int = 1,
                          stop=None):
         memory = ([
-        { "role": "system", "content": system_prompt if system_prompt != "" else "You are an autonomous Agent."},
+        { "role": "system", "content": system_prompt},
         { "role": "user", "content": query },
         ])
         
@@ -75,8 +79,13 @@ class OpenAI(ModelBase):
             temperature=temperature,
             stream=self.stream,
             max_tokens=max_tokens,
-            stop=stop,) 
-        
+            stop=stop,
+            n=k,) 
+        with open("openai.logs", "a") as log_file:
+                    log_file.write(
+                        "\n" + "-----------" + "\n" + "System Prompt : " + system_prompt + "\n" +
+                        "\n" + "-----------" + "\n" + "Prompt : " + query + "\n"
+                    )
         if(self.stream):
             tokens_used = 0
             responses = ''
@@ -92,11 +101,13 @@ class OpenAI(ModelBase):
                     responses += r_text
                     print(colored(r_text, "green"), end='', flush=True)
                 
-            #total_session_tokens += tokens_used
+            total_session_tokens += tokens_used
             
             if show_token_consumption:
                 print(colored("\nTokens used this time: " + str(tokens_used), "red"))
                 print(colored("\nTokens used so far: " + str(total_session_tokens), "yellow"))
+            
+            return responses
         else:
             return response["choices"][0]["message"]["content"]
         
@@ -104,7 +115,7 @@ class OpenAI(ModelBase):
         while True:
             try:
                 messages = [
-                    { "role": "system", "content": system_prompt if system_prompt != "" else "You are an autonomous Agent."},
+                    { "role": "system", "content": system_prompt},
                     {"role": "user", "content": query}
                     ]
                 response = openai.ChatCompletion.create(
