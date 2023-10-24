@@ -11,13 +11,14 @@ CHIMERA_GPT_KEY = os.getenv('CHIMERA_GPT_KEY')
 ZUKI_API_KEY = os.getenv('ZUKI_API_KEY')
 WEBRAFT_API_KEY = os.getenv('WEBRAFT_API_KEY')
 NOVA_API_KEY = os.getenv('NOVA_API_KEY')
-OPEN_AI_BASE = "https://api.naga.ac/v1" # #"https://thirdparty.webraft.in/v1" #"https://zukijourney.xyzbot.net/v1"  #'https://api.nova-oss.com/v1' #"https://thirdparty.webraft.in/v1" # 
+HYPRLAB_API_KEY = os.getenv('HYPRLAB_API_KEY')
+OPEN_AI_BASE = "https://api.hyprlab.io/v1" #"https://api.naga.ac/v1" # #"https://thirdparty.webraft.in/v1" #"https://zukijourney.xyzbot.net/v1"  #'https://api.nova-oss.com/v1' #"https://thirdparty.webraft.in/v1" # 
 
 
 
 
 # Initialize the MonteCarloTreeofThoughts class with the model
-tree_of_thoughts = MonteCarloToTAgent(optimized=True, api_key=CHIMERA_GPT_KEY, api_base=OPEN_AI_BASE)
+tree_of_thoughts = MonteCarloToTAgent(optimized=True, api_key=HYPRLAB_API_KEY, api_base=OPEN_AI_BASE)
 
 # Note to reproduce the same results from the tree of thoughts paper if not better, 
 # craft an 1 shot chain of thought prompt for your task below
