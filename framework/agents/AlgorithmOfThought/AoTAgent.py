@@ -1,4 +1,4 @@
-from framework.agents.AlgorithmOfThought.modelProcesses import ModelProcesses
+from framework.models.modelProcesses import AlgorithmModelProcesses
 import json
 from typing import List, Dict, Any, Tuple
 from framework.models import Models as model
@@ -76,7 +76,7 @@ class AoTAgent():
     solution : str
         The solution to the problem.
     """
-    model: ModelProcesses = None
+    model: AlgorithmModelProcesses = None
     output: list 
     api_key: str
     api_base: str 
@@ -116,7 +116,7 @@ class AoTAgent():
         self.initial_prompt = initial_prompt
         self.output = []
         
-        self.model = ModelProcesses(model_type)
+        self.model = AlgorithmModelProcesses(model_type)
         self.model.LLM.set_api_info(base_api_key=api_key, base_url=api_base)
         self.model.LLM.model = model
         
