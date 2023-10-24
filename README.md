@@ -1,4 +1,4 @@
-# LLM Agent Framework Lite
+# Modular Mind: a lite LLM Agent Framework
 ## **(IN PROGRESS)**
 ### A lightweight and customizable agent framework 
 
