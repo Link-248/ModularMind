@@ -53,7 +53,7 @@ class AlgorithmModelProcesses(AbstractModelProcesses):
     def generate_text(self, prompt: str, system_prompt:str = "", max_tokens: int = 1000, temperature: int = 0.5, k: int = 1) -> List[str]:
         thoughts = []
         for _ in range(k):
-            response = self.LLM.run_with_streaming(system_prompt=system_prompt, query=prompt, max_tokens=max_tokens, temperature=temperature, k=k)
+            response = self.LLM.run_with_streaming(system_prompt=system_prompt, query=prompt, max_tokens=max_tokens, temperature=temperature)
             thoughts += [response]
         return thoughts
 
@@ -162,7 +162,7 @@ class TreeModelProcesses(AbstractModelProcesses):
     def generate_text(self, prompt: str, system_prompt:str = "", max_tokens: int = 1000, temperature: int = 0.5, k: int = 1) -> List[str]:
         thoughts = []
         for _ in range(k):
-            response = self.LLM.run_with_streaming(system_prompt=system_prompt, query=prompt, max_tokens=max_tokens, temperature=temperature, k=k)
+            response = self.LLM.run_with_streaming(system_prompt=system_prompt, query=prompt, max_tokens=max_tokens, temperature=temperature)
             thoughts += [response]
         return thoughts
 
@@ -182,7 +182,7 @@ class TreeModelProcesses(AbstractModelProcesses):
         
         prompt += self.ReAct_prompt
         # print(prompt)
-        thoughts = self.generate_text(prompt, k)
+        thoughts = self.generate_text(prompt=prompt, k=k)
         # print(thoughts)
         # print(f"Generated thoughts: {thoughts}")
         return thoughts
@@ -202,7 +202,7 @@ class TreeModelProcesses(AbstractModelProcesses):
             Devise the best possible solution for the task: {initial_prompt}, Here are evaluated solutions that were rejected: 
             ###{rejected_solutions}###, 
             complete the {initial_prompt} without making the same mistakes you did with the evaluated rejected solutions. Be simple. Be direct. Provide intuitive solutions as soon as you think of them."""
-            answer = self.generate_text(prompt, 1)
+            answer = self.generate_text(prompt=prompt, k=1)
             print(f'Answerrrrrr:  {answer}')
             # print(thoughts)
             # print(f"General Solution : {answer}")
@@ -234,7 +234,7 @@ class TreeModelProcesses(AbstractModelProcesses):
                 
                 
                 try:
-                    response = self.LLM.run(prompt=prompt, max_tokens=10, k=1)
+                    response = self.LLM.run(query=prompt, max_tokens=10, temperature=1)
                     # print(f'state: {value_text}')
                     value = float(response)
                     print(f"Evaluated Thought Value: {value}")
@@ -248,7 +248,7 @@ class TreeModelProcesses(AbstractModelProcesses):
 
             prompt = f"Given the following states of reasoning, vote for the best state utilizing an scalar value 1-10:\n{states_text}\n\nVote, on the probability of this state of reasoning achieveing {initial_prompt} and become very pessimistic very NOTHING ELSE"
 
-            response = self.LLM.run(prompt=prompt, max_tokens=50, k=1)
+            response = self.LLM.run(query=prompt, max_tokens=50, temperature=1)
 
             #print(f'state response: {response}')
 
@@ -271,7 +271,7 @@ class OptimizedTreeModelProcesses(TreeModelProcesses):
                  evaluation_strategy="value", 
                  cache_enabled=True, 
                  enable_ReAct_prompting=False):
-        super().__init__( evaluation_strategy, enable_ReAct_prompting)
+        super().__init__(strategy=strategy, evaluation_strategy=evaluation_strategy, enable_ReAct_prompting=enable_ReAct_prompting)
         self.cache_enabled = cache_enabled
         self.thought_cache = {}
         self.state_evaluation_cache = {}

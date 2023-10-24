@@ -1,4 +1,68 @@
-from framework.agents.AlgorithmOfThought.AoTAgent import AoTAgent
+from framework.agents.TreeOfThought.ToTAgent import MonteCarloToTAgent
+import os
+from dotenv import load_dotenv
+
+api_model= "gpt-3.5-turbo"
+load_dotenv() 
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+PINECONE_API_KEY = os.getenv('PINECONE_API_KEY')
+  
+CHIMERA_GPT_KEY = os.getenv('CHIMERA_GPT_KEY')
+ZUKI_API_KEY = os.getenv('ZUKI_API_KEY')
+WEBRAFT_API_KEY = os.getenv('WEBRAFT_API_KEY')
+NOVA_API_KEY = os.getenv('NOVA_API_KEY')
+OPEN_AI_BASE = "https://api.naga.ac/v1" # #"https://thirdparty.webraft.in/v1" #"https://zukijourney.xyzbot.net/v1"  #'https://api.nova-oss.com/v1' #"https://thirdparty.webraft.in/v1" # 
+
+
+
+
+# Initialize the MonteCarloTreeofThoughts class with the model
+tree_of_thoughts = MonteCarloToTAgent(optimized=True, api_key=CHIMERA_GPT_KEY, api_base=OPEN_AI_BASE)
+
+# Note to reproduce the same results from the tree of thoughts paper if not better, 
+# craft an 1 shot chain of thought prompt for your task below
+
+initial_prompt =  """
+
+
+Input: 2 8 8 14
+Possible next steps:
+2 + 8 = 10 (left: 8 10 14)
+8 / 2 = 4 (left: 4 8 14)
+14 + 2 = 16 (left: 8 8 16)
+2 * 8 = 16 (left: 8 14 16)
+8 - 2 = 6 (left: 6 8 14)
+14 - 8 = 6 (left: 2 6 8)
+14 /  2 = 7 (left: 7 8 8)
+14 - 2 = 12 (left: 8 8 12)
+Input: use 4 numbers and basic arithmetic operations (+-*/) to obtain 24 in 1 equation
+Possible next steps:
+
+
+
+"""
+num_thoughts = 1
+max_steps = 3
+max_states = 4
+pruning_threshold = 0.5
+
+
+
+
+solution = tree_of_thoughts.solve(
+    initial_prompt=initial_prompt,
+    num_thoughts=num_thoughts, 
+    max_steps=max_steps, 
+    max_states=max_states, 
+    pruning_threshold=pruning_threshold,
+    # sleep_time=sleep_time
+)
+
+print(f"Solution: {solution}")
+
+
+#Algorithm of Thought test
+'''from framework.agents.AlgorithmOfThought.AoTAgent import AoTAgent
 
 task = """
 
@@ -33,12 +97,12 @@ from dotenv import load_dotenv
 load_dotenv() 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 PINECONE_API_KEY = os.getenv('PINECONE_API_KEY')
-  
 CHIMERA_GPT_KEY = os.getenv('CHIMERA_GPT_KEY')
 ZUKI_API_KEY = os.getenv('ZUKI_API_KEY')
 WEBRAFT_API_KEY = os.getenv('WEBRAFT_API_KEY')
 NOVA_API_KEY = os.getenv('NOVA_API_KEY')
-OPEN_AI_BASE = 'https://api.nova-oss.com/v1' #"https://thirdparty.webraft.in/v1" # #"https://thirdparty.webraft.in/v1" #"https://zukijourney.xyzbot.net/v1"  #'https://api.nova-oss.com/v1' #"https://thirdparty.webraft.in/v1" # #"https://api.naga.ac/v1"
+OPEN_AI_BASE = "https://api.naga.ac/v1" # #"https://thirdparty.webraft.in/v1" #"https://zukijourney.xyzbot.net/v1"  #'https://api.nova-oss.com/v1' #"https://thirdparty.webraft.in/v1" # 
+
 
 #openai.api_key = OPENAI_API_KEY
 #openai.api_base = OPEN_AI_BASE
@@ -49,12 +113,12 @@ dfs = AoTAgent(
     value_threshold=0.7,
     initial_prompt=task,
     api_base=OPEN_AI_BASE,
-    api_key=NOVA_API_KEY,
+    api_key=CHIMERA_GPT_KEY,
     valid_retry_count=3,
 )
 
 result = dfs.solve()
-print(result)
+print(result)'''
 
 #Vector store + embeddings test 
 '''from framework.blocks.knowledge.vectorStores.Pinecone import Pinecone

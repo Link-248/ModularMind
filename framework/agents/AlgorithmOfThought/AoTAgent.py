@@ -1,7 +1,6 @@
 from framework.models.modelProcesses import AlgorithmModelProcesses
 import json
 from typing import List, Dict, Any, Tuple
-from framework.models import Models as model
 from termcolor import colored
 
 import logging
@@ -252,12 +251,15 @@ class AoTAgent():
             print(colored([state] if cached_value > 0 else [], "yellow"))
             return [state] if cached_value > 0 else []
 
-        thoughts = []
+        #thoughts = []
         # Else generate new thoughts
-        for i in range(self.num_thoughts):
+        '''for i in range(self.num_thoughts):
             thoughts.extend(self.model.generate_thoughts(
                 state=state, initial_prompt=self.initial_prompt
-            ))
+            ))'''
+        thoughts = self.model.generate_thoughts(
+                state=state, k=self.num_thoughts, initial_prompt=self.initial_prompt
+            )
 
         self.evaluated_thoughts = self.model.evaluate_states(
             states=thoughts, initial_prompt=self.initial_prompt

@@ -63,9 +63,7 @@ class OpenAI(ModelBase):
                          show_token_consumption: bool = True, 
                          total_session_tokens: int = 0,
                          temperature: int = 0,
-                         max_tokens: int = 1000,
-                         k:int = 1,
-                         stop=None):
+                         max_tokens: int = 1000):
         memory = ([
         { "role": "system", "content": system_prompt},
         { "role": "user", "content": query },
@@ -78,9 +76,7 @@ class OpenAI(ModelBase):
             messages=memory,
             temperature=temperature,
             stream=self.stream,
-            max_tokens=max_tokens,
-            stop=stop,
-            n=k,) 
+            max_tokens=max_tokens,) 
         with open("openai.logs", "a") as log_file:
                     log_file.write(
                         "\n" + "-----------" + "\n" + "System Prompt : " + system_prompt + "\n" +
@@ -111,7 +107,7 @@ class OpenAI(ModelBase):
         else:
             return response["choices"][0]["message"]["content"]
         
-    def run(self, query, system_prompt: str = "", max_tokens: int = 1000, temperature: int = 0, stop=None, k: int = 1):
+    def run(self, query, system_prompt: str = "", max_tokens: int = 1000, temperature: int = 0):
         while True:
             try:
                 messages = [
@@ -122,9 +118,7 @@ class OpenAI(ModelBase):
                     model=self.model,
                     messages=messages,
                     max_tokens=max_tokens,
-                    temperature=temperature,
-                    stop=stop,
-                    n=k,
+                    temperature=temperature
                     )
                 with open("openai.logs", "a") as log_file:
                     log_file.write(
