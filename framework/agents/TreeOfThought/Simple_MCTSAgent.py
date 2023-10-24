@@ -1,5 +1,5 @@
 import time
-from framework.models.modelProcesses import OptimizedTreeModelProcesses, TreeModelProcesses
+from framework.models.modelProcesses import OptimizedKyeTreeModelProcesses, KyeTreeModelProcesses
 import json
 from typing import Any, Dict, Union
 from termcolor import colored
@@ -33,7 +33,7 @@ logger.addHandler(c_handler)
 logger.addHandler(f_handler)
 
 
-class ToTAgent():
+class Simple_MCTSAgent():
     """
     Tree of Thoughts
     ---------------------
@@ -59,7 +59,7 @@ class ToTAgent():
     solution : str
         The solution to the problem.
     """
-    model: TreeModelProcesses = None
+    model: OptimizedKyeTreeModelProcesses = None
     output: list 
     api_key: str
     api_base: str 
@@ -77,9 +77,9 @@ class ToTAgent():
         self.best_value = float("-inf")
         self.history = [] #added line initalize history
         if optimized:
-            self.model = OptimizedTreeModelProcesses(model_type)
+            self.model = OptimizedKyeTreeModelProcesses(model_type)
         else:
-            self.model = TreeModelProcesses(model_type)
+            self.model = KyeTreeModelProcesses(model_type)
         self.model.LLM.set_api_info(base_api_key=api_key, base_url=api_base)
         self.model.LLM.model = model
 
@@ -111,7 +111,7 @@ class ToTAgent():
         else:
             return max(np.mean(values[-window_size:]), 0.1)
 
-class MonteCarloToTAgent(ToTAgent):
+class MonteCarloAgent(Simple_MCTSAgent):
     """
     Tree of Thoughts: Monte Carlo Search
     ---------------------
@@ -145,7 +145,8 @@ class MonteCarloToTAgent(ToTAgent):
         api_key: str = None,
         api_base: str = 'https://api.openai.com/v1', 
         objective="balance",
-        optimized: bool = False,):
+        optimized: bool = False,
+        enable_ReAct_prompting: bool = True):
         super().__init__(optimized=optimized,model_type=model_type, model=model, api_key=api_key, api_base=api_base)
         self.objective = objective
         self.solution_found = False
@@ -153,6 +154,9 @@ class MonteCarloToTAgent(ToTAgent):
             "nodes": {},
             "metrics": {"thoughts": {}, "evaluations": {}},
         }
+        self.model.ReAct_prompt = ''
+        if enable_ReAct_prompting:
+            self.model.ReAct_prompt = "Write down your observations in format 'Observation:xxxx', then write down your thoughts in format 'Thoughts:xxxx'."
 
 
     def optimize_params(self, num_thoughts, max_steps, max_states):
@@ -210,15 +214,13 @@ class MonteCarloToTAgent(ToTAgent):
         best_value = float('-inf')
 
         for step in range(1, max_steps + 1):
+            print(colored(f"Step: {step}", "yellow"))
             selected_states = []
 
             for state in current_states:
-                if state in transposition_table:
-                    transposition_table[state]
-                else:
-                    time.sleep(1)
+                print(colored(f"Current state: {state}", "blue"))
+                if state not in transposition_table:
                     thoughts = self.model.generate_thoughts(state=state, k=num_thoughts, initial_prompt=initial_prompt)
-                    time.sleep(1)
                     evaluated_thoughts = self.model.evaluate_states(states=thoughts, initial_prompt=initial_prompt)
 
                     for thought, value in evaluated_thoughts.items():
@@ -227,34 +229,39 @@ class MonteCarloToTAgent(ToTAgent):
 
                 for thought, value in evaluated_thoughts.items():
                     flattened_state = (state, thought) if isinstance(state, str) else (*state, thought)
+                    print(colored(f"Flattened state: {flattened_state}", "green"))
 
                     if flattened_state not in visit_counts:
                         visit_counts[flattened_state] = 0
-
-                    if visit_counts[state] > visit_counts[flattened_state] and visit_counts[flattened_state] > 0:
-                        ucb1_value = value + np.sqrt(2 * np.log(visit_counts[state]) / visit_counts[flattened_state])
-
+                        selected_states.append(flattened_state)
+                        state_values[flattened_state] = value
+                        print(colored(f"New state: {flattened_state}", "magenta"))
+                    elif visit_counts[state] > visit_counts[flattened_state]:
+                        if visit_counts[flattened_state] == 0:
+                            ucb1_value = float('inf')
+                        else:
+                            ucb1_value = value + np.sqrt(2 * np.log(visit_counts[state]) / visit_counts[flattened_state])
+                        print(colored(f"UCB1 value: {ucb1_value}", "cyan"))
                         if ucb1_value >= pruning_threshold:
                             selected_states.append(flattened_state)
                             state_values[flattened_state] = value
 
-                            # Update the best state if the current state value is greater than the best value
-                            if value > best_value:
-                                best_state = flattened_state
-                                best_value = value
+                    if value > best_value:
+                        best_state = flattened_state
+                        best_value = value
+                        print(colored(f"New best state: {best_state}", "red"))
 
                 visit_counts[state] += 1
 
             if len(selected_states) > max_states:
                 current_states = selected_states[:max_states]
+
             self.save_tree_to_json(self.file_name)
 
-        # if best_state is not None:
-        #     solution = self.model.generate_solution(initial_prompt, best_state)
-        #     return solution
-        # else:
-        #     solution = None
+        if best_state is not None:
+            solution = self.model.generate_solution(initial_prompt, best_state)
+            return solution
+        else:
+            solution = self.model.generate_solution(initial_prompt, best_state)
+            return solution if solution else best_state
 
-        # return None
-        solution = self.model.generate_solution(initial_prompt, best_state)
-        return solution if solution else best_state

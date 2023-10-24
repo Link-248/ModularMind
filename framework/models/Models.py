@@ -77,7 +77,7 @@ class OpenAI(ModelBase):
             temperature=temperature,
             stream=self.stream,
             max_tokens=max_tokens,) 
-        with open("openai.logs", "a") as log_file:
+        with open("openai.logs", "a", encoding='utf-8') as log_file:
                     log_file.write(
                         "\n" + "-----------" + "\n" + "System Prompt : " + system_prompt + "\n" +
                         "\n" + "-----------" + "\n" + "Prompt : " + query + "\n"
@@ -120,7 +120,7 @@ class OpenAI(ModelBase):
                     max_tokens=max_tokens,
                     temperature=temperature
                     )
-                with open("openai.logs", "a") as log_file:
+                with open("openai.logs", "a", encoding='utf-8') as log_file:
                     log_file.write(
                         "\n" + "-----------" + "\n" + "System Prompt : " + system_prompt + "\n" +
                         "\n" + "-----------" + "\n" + "Prompt : " + query + "\n"

@@ -1,4 +1,4 @@
-from framework.models.modelProcesses import AlgorithmModelProcesses
+from framework.models.modelProcesses import KyeAlgorithmModelProcesses
 import json
 from typing import List, Dict, Any, Tuple
 from termcolor import colored
@@ -75,7 +75,7 @@ class AoTAgent():
     solution : str
         The solution to the problem.
     """
-    model: AlgorithmModelProcesses = None
+    model: KyeAlgorithmModelProcesses = None
     output: list 
     api_key: str
     api_base: str 
@@ -115,7 +115,7 @@ class AoTAgent():
         self.initial_prompt = initial_prompt
         self.output = []
         
-        self.model = AlgorithmModelProcesses(model_type)
+        self.model = KyeAlgorithmModelProcesses(model_type)
         self.model.LLM.set_api_info(base_api_key=api_key, base_url=api_base)
         self.model.LLM.model = model
         

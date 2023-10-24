@@ -44,7 +44,7 @@ class AbstractModelProcesses(ABC):
     def evaluate_states(self, states: List[str], initial_prompt: str):
         pass
 
-class AlgorithmModelProcesses(AbstractModelProcesses):
+class KyeAlgorithmModelProcesses(AbstractModelProcesses):
     LLM = None
     
     def __init__(self, model_to_use: str = 'OpenAI'):
@@ -141,8 +141,9 @@ class AlgorithmModelProcesses(AbstractModelProcesses):
         else:
             raise ValueError("Invalid evaluation strategy. Choose 'value' or 'vote'.")
         
-class TreeModelProcesses(AbstractModelProcesses):
+class KyeTreeModelProcesses(AbstractModelProcesses):
     LLM = None
+    ReAct_prompt: str
     
     def __init__(self, 
                  model_to_use: str = 'OpenAI',
@@ -150,11 +151,8 @@ class TreeModelProcesses(AbstractModelProcesses):
                  strategy: str="cot", 
                  evaluation_strategy: str="value",):
         self.LLM = model.Models.get_Model(model_to_use)
-        
+        self.enable_ReAct_prompting = enable_ReAct_prompting
         # reference : https://www.promptingguide.ai/techniques/react
-        self.ReAct_prompt = ''
-        if enable_ReAct_prompting:
-            self.ReAct_prompt = "Write down your observations in format 'Observation:xxxx', then write down your thoughts in format 'Thoughts:xxxx'."
         
         self.strategy = strategy
         self.evaluation_strategy = evaluation_strategy
@@ -162,7 +160,7 @@ class TreeModelProcesses(AbstractModelProcesses):
     def generate_text(self, prompt: str, system_prompt:str = "", max_tokens: int = 1000, temperature: int = 0.5, k: int = 1) -> List[str]:
         thoughts = []
         for _ in range(k):
-            response = self.LLM.run_with_streaming(system_prompt=system_prompt, query=prompt, max_tokens=max_tokens, temperature=temperature)
+            response = self.LLM.run(system_prompt=system_prompt, query=prompt, max_tokens=max_tokens, temperature=temperature)
             thoughts += [response]
         return thoughts
 
@@ -174,7 +172,7 @@ class TreeModelProcesses(AbstractModelProcesses):
         print("New state generating thought:", state, "\n\n")
         # prompt = f"Considering the thoughts you've had until now:\n\n{state_text}\n\nDevise the next coherent thought that will aid in advancing the reasoning process and achieving a solution to {initial_prompt}. Assess various scenarios, think unconventionally, anticipate potential challenges, and resolve any outstanding queries. Tap into your mind's full potential and make certain no open questions remain."
         prompt = f"""You're an TreeofThoughts, an superintelligent AI model devoted to helping Humans by any means necessary. You're purpose is to generate a series of solutions to comply with the user's instructions, you must generate solutions on the basis of determining the most reliable solution in the shortest amount of time, while taking rejected solutions into account and learning from them. 
-        Considering the reasoning provided:\n\n
+        Considering the prompt provided:\n\n
         ###'{state_text}'\n\n###
         Devise the best possible solution for the task: {initial_prompt}, Here are evaluated solutions that were rejected: 
         ###{rejected_solutions}###, 
@@ -197,7 +195,7 @@ class TreeModelProcesses(AbstractModelProcesses):
                 state_text = state
             
             prompt = f"""You're a TreeofThought, an superintelligent AI model devoted to helping Humans by any means necessary. You're purpose is to generate a series of solutions to comply with the user's instructions, you must generate solutions on the basis of determining the most reliable solution in the shortest amount of time, while taking rejected solutions into account and learning from them. 
-            Considering the reasoning provided:\n\n
+            Considering the prompt provided:\n\n
             ###'{state_text}'\n\n###
             Devise the best possible solution for the task: {initial_prompt}, Here are evaluated solutions that were rejected: 
             ###{rejected_solutions}###, 
@@ -227,7 +225,7 @@ class TreeModelProcesses(AbstractModelProcesses):
                 prompt = f""" To achieve the following goal: '{initial_prompt}', pessimistically value the context of the past solutions and more importantly the latest generated solution you had AS A FLOAT BETWEEN 0 AND 1\n
                     Past solutions:\n\n
                     {state_text}\n       
-                    If the solutions is not directly concretely making fast progress in achieving the goal, give it a lower score.
+                    If the solutions is not directly concretely making fast progress in achieving the goal or has an incorrect conclusion, give it a lower score.
                     Evaluate all solutions AS A FLOAT BETWEEN 0 and 1:\n,  DO NOT RETURN ANYTHING ELSE
                 """
                 # and then inside backticks provide an simple and direct bulletpoint list as to why you evaluated this thought the way you did. Provide simple yet intuitive feedback.
@@ -265,16 +263,17 @@ class TreeModelProcesses(AbstractModelProcesses):
         else:
             raise ValueError("Invalid evaluation strategy. Choose 'value' or 'vote'.")
         
-class OptimizedTreeModelProcesses(TreeModelProcesses):
+class OptimizedKyeTreeModelProcesses(KyeTreeModelProcesses):
     def __init__(self, 
                  strategy="cot",
                  evaluation_strategy="value", 
                  cache_enabled=True, 
-                 enable_ReAct_prompting=False):
+                 enable_ReAct_prompting=True):
         super().__init__(strategy=strategy, evaluation_strategy=evaluation_strategy, enable_ReAct_prompting=enable_ReAct_prompting)
         self.cache_enabled = cache_enabled
         self.thought_cache = {}
         self.state_evaluation_cache = {}
+        
 
     def parallel_generate_thoughts(self, states: str, k: int = 1):
         with concurrent.futures.ThreadPoolExecutor() as executor:

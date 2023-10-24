@@ -1,4 +1,4 @@
-from framework.agents.TreeOfThought.ToTAgent import MonteCarloToTAgent
+from framework.agents.TreeOfThought.Simple_MCTSAgent import MonteCarloAgent
 import os
 from dotenv import load_dotenv
 
@@ -12,40 +12,24 @@ ZUKI_API_KEY = os.getenv('ZUKI_API_KEY')
 WEBRAFT_API_KEY = os.getenv('WEBRAFT_API_KEY')
 NOVA_API_KEY = os.getenv('NOVA_API_KEY')
 HYPRLAB_API_KEY = os.getenv('HYPRLAB_API_KEY')
-OPEN_AI_BASE = "https://api.hyprlab.io/v1" #"https://api.naga.ac/v1" # #"https://thirdparty.webraft.in/v1" #"https://zukijourney.xyzbot.net/v1"  #'https://api.nova-oss.com/v1' #"https://thirdparty.webraft.in/v1" # 
+OPEN_AI_BASE =  'https://api.nova-oss.com/v1' #"https://api.hyprlab.io/v1" #"https://api.naga.ac/v1" # #"https://thirdparty.webraft.in/v1" #"https://zukijourney.xyzbot.net/v1"  #"https://thirdparty.webraft.in/v1" # 
 
 
 
 
 # Initialize the MonteCarloTreeofThoughts class with the model
-tree_of_thoughts = MonteCarloToTAgent(optimized=True, api_key=HYPRLAB_API_KEY, api_base=OPEN_AI_BASE)
+tree_of_thoughts = MonteCarloAgent(enable_ReAct_prompting=False, optimized=True, api_key=NOVA_API_KEY, api_base=OPEN_AI_BASE)
 
 # Note to reproduce the same results from the tree of thoughts paper if not better, 
 # craft an 1 shot chain of thought prompt for your task below
 
-initial_prompt =  """
-
-
-Input: 2 8 8 14
-Possible next steps:
-2 + 8 = 10 (left: 8 10 14)
-8 / 2 = 4 (left: 4 8 14)
-14 + 2 = 16 (left: 8 8 16)
-2 * 8 = 16 (left: 8 14 16)
-8 - 2 = 6 (left: 6 8 14)
-14 - 8 = 6 (left: 2 6 8)
-14 /  2 = 7 (left: 7 8 8)
-14 - 2 = 12 (left: 8 8 12)
-Input: use 4 numbers and basic arithmetic operations (+-*/) to obtain 24 in 1 equation
-Possible next steps:
-
-
-
-"""
+initial_prompt =  """Determine whether the relation R on the set of all real
+numbers is reflexive, symmetric, antisymmetric, and/or
+transitive, where (x, y) belong to R if and only if x=y(mod 7)"""
 num_thoughts = 1
 max_steps = 3
 max_states = 4
-pruning_threshold = 0.5
+pruning_threshold = 0.9
 
 
 
