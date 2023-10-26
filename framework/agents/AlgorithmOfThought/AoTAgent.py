@@ -37,7 +37,6 @@ logger.addHandler(f_handler)
 
 # Define constants
 PRUNING_THRESHOLD = 0.5
-BACKTRACKING_THRESHOLD = 0.4
 
 class AoTAgent():
     """
@@ -104,7 +103,6 @@ class AoTAgent():
         max_steps: int = 1,
         value_threshold: float = 0.5,
         pruning_threshold: float = PRUNING_THRESHOLD,
-        backtracking_threshold: float = BACKTRACKING_THRESHOLD,
         initial_prompt: str = None,
         thought_cache: Dict[str, Any] = None,
         valid_retry_count: int = 1,
@@ -117,7 +115,6 @@ class AoTAgent():
         self.num_thoughts = num_thoughts
         self.max_steps = max_steps
         self.value_threshold = value_threshold
-        self.backtracking_threshold = backtracking_threshold
         self.pruning_threshold = pruning_threshold
         self.initial_prompt = initial_prompt
         self.output = []
