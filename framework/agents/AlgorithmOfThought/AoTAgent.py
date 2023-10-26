@@ -165,7 +165,8 @@ class AoTAgent():
             with open("./thought_cache.json", "a") as json_file:
                 json.dump(self.thought_cache, json_file)'''
             # Draw the graph at the end of the solve method
-            nx.draw(self.graph, with_labels=True)
+            pos = nx.spring_layout(self.graph, scale=2)  # This will calculate the positions of the nodes
+            nx.draw(self.graph, pos, with_labels=True, node_size=500)
             plt.show()
             return solution
 

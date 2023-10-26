@@ -50,7 +50,17 @@ print(f"Solution: {solution}")'''
 from framework.agents.AlgorithmOfThought.AoTAgent import AoTAgent
 
 task = """
-If (A-B) = [1,5,7,8], (B-A) = [2,10], and (A∩B) = [3,6,9], Find the set B.
+Laird: Pure research provides us with new technologies that contribute to saving lives. Even more worthwhile than this, however, is its role in expanding our knowledge and providing new, unexplored ideas.
+
+Kim: Your priorities are mistaken. Saving lives is what counts most of all. Without pure research, medicine would not be as advanced as it is.
+
+Laird and Kim disagree on whether pure research
+
+A) derives its significance in part from its providing new technologies 
+B) expands the boundaries of our knowledge of medicine
+C) should have the saving of human lives as an important goal
+D) has its most valuable achievements in medical applications
+E) has any value apart from its role in providing new technologies to save lives
 """
 import os
 from dotenv import load_dotenv
@@ -72,7 +82,7 @@ NOVA_BASE = 'https://api.nova-oss.com/v1'
 #openai.api_base = OPEN_AI_BASE
 
 dfs = AoTAgent(
-    model="gpt-3.5-turbo",
+    model="gpt-4-32k",
     num_thoughts=2,
     max_steps=3,
     value_threshold=0.7,

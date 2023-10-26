@@ -66,10 +66,10 @@ class AlgorithmModelProcesses(AbstractModelProcesses):
         system_prompt = f"""
         Please follow these steps to complete the task:
 
-        1. Break down the task into {max_steps} subtasks.
+        1. Break down the task into {max_steps} subtasks and lay them out under ###PLAN###.
         2. ONLY Generate and evaluate the potential NEXT STEP in the solution under ###CURRENT STEP### and provide the step number.
         3. If a step doesn't progress towards a solution, explore another path.
-        4. Provide the next step needed to progress towards the solution. DO NOT PROVIDE A SOLUTION UNLESS IT IS THE {max_steps} STEP
+        4. Provide the next step under ###NEXT STEP### needed to progress towards the solution. DO NOT PROVIDE A SOLUTION UNLESS THE ###CURRENT STEP### IS STEP {max_steps}
 
         Remember, all tasks have solutions. Keep your responses concise and complete.
         #####OBJECTIVE#####
@@ -122,21 +122,21 @@ class AlgorithmModelProcesses(AbstractModelProcesses):
                 else:
                     state_text = "\n".join(state)
                 prompt = f""" To achieve the following goal: '{initial_prompt}', 
-                    pessimistically value the context of the past steps towards the solutions and 
-                    more importantly the latest generated step towards the solution AS A FLOAT BETWEEN 0 AND 1\n
-                    Past steps to the solution:\n\n
+                    pessimistically value the latest generated step and all past steps towards the possible solution
+                    AS A FLOAT BETWEEN 0 AND 1\n
+                    Past steps and context to the solution:\n\n
                     {state_text}\n
                     
-                    This was the previous score: {previous_score}, 
-                    Only rate it higher than the previous score if it progresses towards the solution or includes it.\n  
+                    This was the previous score: {previous_score} of that step, 
+                    Only rate it higher than the previous score if it progresses towards the solution.\n  
                     If the solutions is not making fast progress in achieving the goal, give it a lower score.
-                    Evaluate the current state of the solution AS A FLOAT BETWEEN 0 and 1:\n,  DO NOT RETURN ANYTHING ELSE, JUST THE FLOAT
+                    Again evaluate the current state AS A FLOAT BETWEEN 0 and 1:\n,  DO NOT RETURN ANYTHING ELSE, JUST THE FLOAT
                 """
                 response = self.LLM.run(query=prompt, max_tokens=10, temperature=1)
                 match = re.search(r'[-+]?[0-9]*\.?[0-9]+', response)
                 if match:
                     value = float(match.group())
-                    print(colored(f"Evaluated Thought Value: {value}", "green"))
+                    print(colored(f"Evaluated Thought Value: {value} with context being {state_text}", "green"))
                     state_values[state] = value
                 else:
                     print(colored(f"No float value found in response: {response}", "red"))
