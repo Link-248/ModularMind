@@ -1,3 +1,4 @@
+import re
 from framework.models import Models as model
 from typing import List, Dict
 from termcolor import colored
@@ -44,7 +45,7 @@ class AbstractModelProcesses(ABC):
     def evaluate_states(self, states: List[str], initial_prompt: str):
         pass
 
-class KyeAlgorithmModelProcesses(AbstractModelProcesses):
+class AlgorithmModelProcesses(AbstractModelProcesses):
     LLM = None
     
     def __init__(self, model_to_use: str = 'OpenAI'):
@@ -53,11 +54,11 @@ class KyeAlgorithmModelProcesses(AbstractModelProcesses):
     def generate_text(self, prompt: str, system_prompt:str = "", max_tokens: int = 1000, temperature: int = 0.5, k: int = 1) -> List[str]:
         thoughts = []
         for _ in range(k):
-            response = self.LLM.run_with_streaming(system_prompt=system_prompt, query=prompt, max_tokens=max_tokens, temperature=temperature)
+            response = self.LLM.run(system_prompt=system_prompt, query=prompt, max_tokens=max_tokens, temperature=temperature)
             thoughts += [response]
         return thoughts
 
-    def generate_thoughts(self, state: str, initial_prompt: str, k: int = 1, rejected_solutions=None) -> List[str]:
+    def generate_thoughts(self, state: str, initial_prompt: str, k: int = 1, rejected_solutions=None, max_steps: int = 3) -> List[str]:
         if type(state) == str:
             state_text = state
         else:
@@ -65,22 +66,19 @@ class KyeAlgorithmModelProcesses(AbstractModelProcesses):
         system_prompt = f"""
         Please follow these steps to complete the task:
 
-        1. Break down the task into minimal subtasks.
-        2. Use markers like '1', '2', '3' to guide the exploration of the OBJECTIVE.
-        3. Generate and evaluate potential next steps.
-        4. If a step doesn't progress towards a solution, explore another path.
-        5. Provide a solution for each subtask and summarize the final result.
+        1. Break down the task into {max_steps} subtasks.
+        2. ONLY Generate and evaluate the potential NEXT STEP in the solution under ###CURRENT STEP### and provide the step number.
+        3. If a step doesn't progress towards a solution, explore another path.
+        4. Provide the next step needed to progress towards the solution. DO NOT PROVIDE A SOLUTION UNLESS IT IS THE {max_steps} STEP
 
         Remember, all tasks have solutions. Keep your responses concise and complete.
-        """
-        prompt = f"""
-        (DO NOT INCLUDE THIS IN YOUR RESPONSE)
         #####OBJECTIVE#####
         {initial_prompt}
         ###################
-        ###CURRENT STATE###
+        """
+        prompt = f"""
+        ###CURRENT PROGRESS###
         {state_text}
-        ###################
     """
         thoughts = self.generate_text(system_prompt=system_prompt, prompt=prompt, k=k)
         return thoughts
@@ -93,26 +91,26 @@ class KyeAlgorithmModelProcesses(AbstractModelProcesses):
                 state_text = state
 
             prompt = f"""
-            Generate a series of solutions to comply with the user's instructions, 
-            you must generate solutions on the basis of determining the most reliable solution in the shortest amount of time, 
+            Generate a solution to comply with the user's instructions, 
+            you must generate a solution on the basis of determining the most reliable solution in the shortest amount of time, 
             while taking rejected solutions into account and learning from them. 
             Considering the reasoning provided:\n\n
             ###'{state_text}'\n\n###
             Devise the best possible solution for the task: {initial_prompt}, Here are evaluated solutions that were rejected: 
             ###{rejected_solutions}###, 
-            complete the {initial_prompt} without making the same mistakes you did with the evaluated rejected solutions. 
+            Give the solution without making the same mistakes you did with the evaluated rejected solutions. 
             Be simple. Be direct. Provide intuitive solutions as soon as you think of them."""
            
             answer = self.generate_text(prompt=prompt, max_tokens=2048, temperature=0)
             if not answer or answer == '':  # Check if the answer is empty
                 raise ValueError("No solution generated")
-            logger.info(colored(f"Generated Solution Summary {answer}", "green"))
+            #logger.info(colored(f"Generated Solution Summary {answer}", "green"))
             return answer
         except Exception as e:
             logging.error(colored(f"Error in generate_solutions: {e}", "red"))
             return None
 
-    def evaluate_states(self, states: List[str], initial_prompt: str) -> Dict[str, float]:
+    def evaluate_states(self, states: List[str], initial_prompt: str, previous_score: float) -> Dict[str, float]:
         if not states:
             return {}
 
@@ -123,19 +121,25 @@ class KyeAlgorithmModelProcesses(AbstractModelProcesses):
                     state_text = state
                 else:
                     state_text = "\n".join(state)
-                prompt = f""" To achieve the following goal: '{initial_prompt}', pessimistically value the context of the past solutions and more importantly the latest generated solution you had AS A FLOAT BETWEEN 0 AND 1\n
-                    Past solutions:\n\n
-                    {state_text}\n       
+                prompt = f""" To achieve the following goal: '{initial_prompt}', 
+                    pessimistically value the context of the past steps towards the solutions and 
+                    more importantly the latest generated step towards the solution AS A FLOAT BETWEEN 0 AND 1\n
+                    Past steps to the solution:\n\n
+                    {state_text}\n
+                    
+                    This was the previous score: {previous_score}, 
+                    Only rate it higher than the previous score if it progresses towards the solution or includes it.\n  
                     If the solutions is not making fast progress in achieving the goal, give it a lower score.
-                    Evaluate all solutions AS A FLOAT BETWEEN 0 and 1:\n,  DO NOT RETURN ANYTHING ELSE
+                    Evaluate the current state of the solution AS A FLOAT BETWEEN 0 and 1:\n,  DO NOT RETURN ANYTHING ELSE, JUST THE FLOAT
                 """
                 response = self.LLM.run(query=prompt, max_tokens=10, temperature=1)
-                try:
-                    value = float(response)
-                    logger.info(colored(f"Evaluated Thought Value: {value}", "green"))
-                except ValueError:
-                    value = 0
-                state_values[state] = value
+                match = re.search(r'[-+]?[0-9]*\.?[0-9]+', response)
+                if match:
+                    value = float(match.group())
+                    print(colored(f"Evaluated Thought Value: {value}", "green"))
+                    state_values[state] = value
+                else:
+                    print(colored(f"No float value found in response: {response}", "red"))
             return state_values
 
         else:

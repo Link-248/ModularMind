@@ -1,4 +1,4 @@
-from framework.agents.TreeOfThought.Simple_MCTSAgent import MonteCarloAgent
+'''from framework.agents.TreeOfThought.Simple_MCTSAgent import MonteCarloAgent
 import os
 from dotenv import load_dotenv
 
@@ -43,38 +43,14 @@ solution = tree_of_thoughts.solve(
     # sleep_time=sleep_time
 )
 
-print(f"Solution: {solution}")
+print(f"Solution: {solution}")'''
 
 
 #Algorithm of Thought test
-'''from framework.agents.AlgorithmOfThought.AoTAgent import AoTAgent
+from framework.agents.AlgorithmOfThought.AoTAgent import AoTAgent
 
 task = """
-
-
-PROMPT
-###################
-Use numbers and basic arithmetic operations (+ - * /) to obtain 24. When
-considering the next steps, do not choose operations that will result in a
-negative or fractional number. In order to help with the calculations, the
-numbers in the parenthesis represent the numbers that are left after the
-operations and they are in descending order.
-Another thing we do is when there are only two numbers left in the parenthesis, we
-check whether we can arrive at 24 only by using basic arithmetic operations
-(+ - * /). Some examples regarding this idea:
-(21 2) no
-since 21 + 2 = 23, 21 - 2 = 19, 21 * 2 = 42, 21 / 2 = 10.5, none of which is equal
-to 24.
-(30 6) 30 - 6 = 24 yes
-(8 3) 8 * 3 = 24 yes
-(12 8) no
-(48 2) 48 / 2 = 24 yes
-Most importantly, do not give up, all the numbers that will be given has indeed a
-solution.
-
-OBJECTIVE:
-5 10 5 2
-###################
+If (A-B) = [1,5,7,8], (B-A) = [2,10], and (A∩B) = [3,6,9], Find the set B.
 """
 import os
 from dotenv import load_dotenv
@@ -86,24 +62,28 @@ CHIMERA_GPT_KEY = os.getenv('CHIMERA_GPT_KEY')
 ZUKI_API_KEY = os.getenv('ZUKI_API_KEY')
 WEBRAFT_API_KEY = os.getenv('WEBRAFT_API_KEY')
 NOVA_API_KEY = os.getenv('NOVA_API_KEY')
-OPEN_AI_BASE = "https://api.naga.ac/v1" # #"https://thirdparty.webraft.in/v1" #"https://zukijourney.xyzbot.net/v1"  #'https://api.nova-oss.com/v1' #"https://thirdparty.webraft.in/v1" # 
+HYPRLAB_API_KEY = os.getenv('HYPRLAB_API_KEY')
+OPEN_AI_BASE =  "https://api.hyprlab.io/v1" #'https://api.nova-oss.com/v1' #"https://api.naga.ac/v1" # #"https://thirdparty.webraft.in/v1" #"https://zukijourney.xyzbot.net/v1"  #"https://thirdparty.webraft.in/v1" # 
+NOVA_BASE = 'https://api.nova-oss.com/v1'
+
 
 
 #openai.api_key = OPENAI_API_KEY
 #openai.api_base = OPEN_AI_BASE
 
 dfs = AoTAgent(
+    model="gpt-3.5-turbo",
     num_thoughts=2,
-    max_steps=5,
+    max_steps=3,
     value_threshold=0.7,
     initial_prompt=task,
     api_base=OPEN_AI_BASE,
-    api_key=CHIMERA_GPT_KEY,
-    valid_retry_count=3,
+    api_key=HYPRLAB_API_KEY,
+    valid_retry_count=1,
 )
 
 result = dfs.solve()
-print(result)'''
+print(result)
 
 #Vector store + embeddings test 
 '''from framework.blocks.knowledge.vectorStores.Pinecone import Pinecone
