@@ -117,7 +117,7 @@ class AoTAgent():
         self.value_threshold = value_threshold
         self.pruning_threshold = pruning_threshold
         self.initial_prompt = initial_prompt
-        self.output = []
+        #self.output = []
         
         self.model = AlgorithmModelProcesses(model_type)
         self.model.LLM.set_api_info(base_api_key=api_key, base_url=api_base)
@@ -143,12 +143,12 @@ class AoTAgent():
             self.dfs(self.initial_prompt, 1)
             
             # Check if any thoughts were generated
-            if not self.output:
+            if not self.evaluated_thoughts:
                 logger.error("No valid thoughts were generated during DFS")
                 return None
 
             # Find the best thought and its value
-            print(colored(f"Output: {self.results}", "green"))
+            print(colored(f"results: {self.results}", "green"))
             best_state, best_value = max(self.results, key=lambda x: x[1])
             #print(colored(f"Best state: {best_state}, best value: {best_value}", "red"))
             # Cache the best thought
@@ -198,16 +198,8 @@ class AoTAgent():
             value = self.check_cache(state)
             if value is not None or 0:
                 self.results.append((state, value))
-            #else:
-                #print(colored(f"ERROR: state not in cache: {self.evaluated_thoughts.get(state)},  {state}", "red"))
-                #self.results.append((state, self.evaluated_thoughts.get(state)))
             return
          # Check cache before generating and filtering
-        '''if state in self.thought_cache["accepted"]:
-            value = self.thought_cache["accepted"][state]
-            print(colored(f" Cached value: {value}", "cyan"))
-            self.evaluated_thoughts[state] = value
-            thoughts = [state]'''
         retry_count = 0
         while retry_count < self.valid_retry_count:
             last_state_value = self.evaluated_thoughts.get(state) if state in self.evaluated_thoughts else None
@@ -216,6 +208,11 @@ class AoTAgent():
             if any(self.evaluated_thoughts[thought] > self.value_threshold for thought in thoughts):
                 break
             retry_count += 1
+        if not thoughts:
+            new_state = state + '\n Be less harsh on future evaluations'
+            self.graph.add_edge(state, new_state) 
+            self.dfs(state=new_state, step=step + 1)
+            return
         
         print(colored("Step: " + str(step), "red"))
         for next_state in thoughts:
@@ -231,44 +228,31 @@ class AoTAgent():
             # check thoughts less than the value threshold and cache pruned thoughts 
             if next_state_value <= self.value_threshold:
                 self.thought_cache["pruned"][next_state] = next_state_value
-                if(next_state in self.output):
-                    self.output.remove(next_state)
-                print(colored(f"Pruned thought: value: {next_state_value}", "red"))
-                #continue
-            else:
-                self.output.append((next_state, next_state_value))
+                if next_state in self.evaluated_thoughts:
+                    del self.evaluated_thoughts[next_state]
+                print(colored(f"Pruned thought under {self.value_threshold}: value: {next_state_value}", "red"))          
             
-            #backtracking
-            if self.output:  # Check if self.output is not empty
-                best_state, best_value = max(self.output, key=lambda item: item[1])
+            if self.evaluated_thoughts:
+                best_state, best_value = max(self.evaluated_thoughts.items(), key=lambda item: item[1])
+                print(colored(f"Best state: {best_state}, best value: {best_value}", "red"))
+                #backtracking
                 if best_value > next_state_value:
                     print(colored(f"Backtracking to: {best_state}", "yellow"))
-                    if(next_state in self.output):
-                        self.output.remove(next_state)
-                    if(best_state not in self.output):
-                        self.output.append((best_state, best_value))
-                    follow_up_state = best_state
+                    if next_state in self.evaluated_thoughts:
+                        del self.evaluated_thoughts[next_state]
+                    self.graph.add_edge(next_state, best_state)
+                    child = best_state
                 else: 
                     print(colored(f"continue with {next_state}", "yellow")) 
-                    follow_up_state = next_state
+                    child = next_state
+                    self.graph.add_edge(state, next_state) 
             else:
-                follow_up_state = state   
-                       
-            child = follow_up_state
-            '''(
-                (str(state), str(follow_up_state)) if isinstance(state, str) else (*map(str, state), str(follow_up_state))
-                    )  '''         
+                child = state
+                self.graph.add_edge(next_state, state)
+                   
             if step <= self.max_steps:
-                self.graph.add_edge(state, child)
                 self.last_state = state
                 self.dfs(state=child, step=step + 1)
-           
-            
-
-        # Add to output regardless of whether the state is in the cache
-        '''thought, value = self.evaluate_thought(state)
-        if thought not in [t for t, _ in self.output]:
-            self.output.append((thought, value))'''
 
     def generate_and_filter_thoughts(self, state: str, last_score: float, last_step:int, last_state: str) -> List[str]:
         """Generate and filter thoughts"""
@@ -290,6 +274,7 @@ class AoTAgent():
                 print(colored(f"cached state: {state}, Cached value: {cached_value}", "cyan"))
                 thoughts.remove(thought)
                 #self.graph.add_edge(state, thought)
+            #else:  <-- probably need this here to avoid duplicate nodes and edges but Also not since we want to see ALL data produced and how it is processes    
             self.graph.add_edge(state, thought)
             
         new_evaluations = self.model.evaluate_states(
@@ -310,6 +295,7 @@ class AoTAgent():
         for thought in thoughts:
             if self.evaluated_thoughts[thought] < self.pruning_threshold:
                 self.thought_cache["pruned"][str(thought)] = self.evaluated_thoughts[thought]
+                print(colored(f"Pruned thought under {self.pruning_threshold}: value: {thought}", "red"))
 
         #logger.info(colored(f"filtered_thoughts: {filtered_thoughts}", "yellow"))
         #print(colored(f"filtered_thoughts: {filtered_thoughts}", "yellow"))
