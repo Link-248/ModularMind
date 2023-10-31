@@ -5,6 +5,7 @@ from termcolor import colored
 
 import networkx as nx
 import matplotlib.pyplot as plt
+import pygraphviz
 
 
 import logging
@@ -125,12 +126,13 @@ class AoTAgent():
         
         self.best_state = None
         self.best_value = float('-inf')
+        self.best_state_node = None
         
         self.valid_retry_count = valid_retry_count
         self.results = []
         self.evaluated_thoughts = {}
         self.last_state = ""
-        
+        self.nodeCount = 0
         self.graph = nx.DiGraph()  # Add this line to initialize the graph
 
     def solve(self) -> str:
@@ -138,21 +140,19 @@ class AoTAgent():
         try:
             self.last_state = self.initial_prompt
             
-            self.graph.add_node(self.initial_prompt)
+            #self.graph.add_node(self.nodeCount, state=self.initial_prompt)
+            #self.nodeCount += 1
             # Run DFS
             self.dfs(self.initial_prompt, 1)
-            
-            # Check if any thoughts were generated
-            if not self.evaluated_thoughts:
-                logger.error("No valid thoughts were generated during DFS")
-                return None
 
             # Find the best thought and its value
-            print(colored(f"results: {self.results}", "green"))
-            best_state, best_value = max(self.results, key=lambda x: x[1])
-            #print(colored(f"Best state: {best_state}, best value: {best_value}", "red"))
-            # Cache the best thought
-            #self.thought_cache["accepted"][best_state] = best_value
+            if(not self.results):
+                print(colored(f"results: {self.results}", "green"))
+                best_state, best_value = max(self.results, key=lambda x: x[1])
+            elif(not self.best_state):
+                best_state = self.best_state
+            else:
+                best_state = self.initial_prompt
 
             # Generate the final solution based on the best thought
             solution = self.model.generate_solution(initial_prompt=self.initial_prompt, state=best_state, rejected_solutions=self.thought_cache["pruned"])
@@ -165,13 +165,25 @@ class AoTAgent():
             with open("./thought_cache.json", "a") as json_file:
                 json.dump(self.thought_cache, json_file)'''
             # Draw the graph at the end of the solve method
-            pos = nx.spring_layout(self.graph, scale=2)  # This will calculate the positions of the nodes
-            nx.draw(self.graph, pos, with_labels=True, node_size=500)
-            plt.show()
+           # pos = nx.spring_layout(self.graph, scale=10)  # This will calculate the positions of the nodes
+            print(self.graph.edges(data=True))
+           # labels = {node: data['state'] for node, data in self.graph.nodes(data=True)}
+            T = nx.dfs_tree(self.graph, source=0)  # This will create a tree from the graph
+            pos = nx.drawing.nx_agraph.graphviz_layout(T, prog='dot')
+            try:
+                nx.draw(T, pos, with_labels=True, arrows=True)   
+                plt.show() 
+            except Exception as e :
+                print(e)
+            ''' try:
+                nx.draw(self.graph, labels=labels, with_labels=True)
+                plt.show()
+            except Exception as e:
+                print(e)'''
             return solution
 
         except Exception as error:
-            logger.error(f"Error in tot_dfs: {error}")
+            logger.error(f"Error in AoT_dfs: {error}")
 
             '''
             # Write cache to JSON file even if an error occurs
@@ -199,20 +211,18 @@ class AoTAgent():
             if value is not None or 0:
                 self.results.append((state, value))
             return
-         # Check cache before generating and filtering
+
         retry_count = 0
         while retry_count < self.valid_retry_count:
             last_state_value = self.evaluated_thoughts.get(state) if state in self.evaluated_thoughts else None
-            thoughts = self.generate_and_filter_thoughts(state=state, last_score=last_state_value, last_step=step, last_state=self.last_state)
+            thoughts = self.generate_and_filter_thoughts(state=state, last_score=last_state_value, last_step=step, last_state=self.last_state, current_step=step)
             # Check if any thought has a value above the threshold
             if any(self.evaluated_thoughts[thought] > self.value_threshold for thought in thoughts):
                 break
             retry_count += 1
         if not thoughts:
-            new_state = state + '\n Be less harsh on future evaluations'
-            self.graph.add_edge(state, new_state) 
-            self.dfs(state=new_state, step=step + 1)
-            return
+            self.last_state = state
+            self.dfs(state=state, step=step + 1)
         
         print(colored("Step: " + str(step), "red"))
         for next_state in thoughts:
@@ -230,55 +240,59 @@ class AoTAgent():
                 self.thought_cache["pruned"][next_state] = next_state_value
                 if next_state in self.evaluated_thoughts:
                     del self.evaluated_thoughts[next_state]
-                print(colored(f"Pruned thought under {self.value_threshold}: value: {next_state_value}", "red"))          
+                print(colored(f"Pruned thought under {self.value_threshold}: value: {next_state_value}", "red"))  
+                        
             
             if self.evaluated_thoughts:
                 best_state, best_value = max(self.evaluated_thoughts.items(), key=lambda item: item[1])
+                best_state_nodeCount = self.get_node_number_from_state(best_state)
                 print(colored(f"Best state: {best_state}, best value: {best_value}", "red"))
                 #backtracking
                 if best_value > next_state_value:
                     print(colored(f"Backtracking to: {best_state}", "yellow"))
                     if next_state in self.evaluated_thoughts:
                         del self.evaluated_thoughts[next_state]
-                    self.graph.add_edge(next_state, best_state)
                     child = best_state
+                    self.add_nodes_and_edge(self.get_node_number_from_state(next_state), False, next_state, 
+                                            best_state_nodeCount, False, best_state)
+                    self.nodeCount = best_state_nodeCount
                 else: 
                     print(colored(f"continue with {next_state}", "yellow")) 
                     child = next_state
-                    self.graph.add_edge(state, next_state) 
+                    self.add_nodes_and_edge(self.get_node_number_from_state(state), False, state, 
+                                            self.get_node_number_from_state(next_state), False, next_state)
             else:
                 child = state
-                self.graph.add_edge(next_state, state)
-                   
+                self.add_nodes_and_edge(self.get_node_number_from_state(next_state), False, next_state, 
+                                        self.get_node_number_from_state(state), False, state)
+                  
+                
+               
             if step <= self.max_steps:
                 self.last_state = state
                 self.dfs(state=child, step=step + 1)
 
-    def generate_and_filter_thoughts(self, state: str, last_score: float, last_step:int, last_state: str) -> List[str]:
+    def generate_and_filter_thoughts(self, state: str, last_score: float, last_step:int, last_state: str, current_step: int) -> List[str]:
         """Generate and filter thoughts"""
-
-        #thoughts = []
-        # Else generate new thoughts
-        '''for i in range(self.num_thoughts):
-            thoughts.extend(self.model.generate_thoughts(
-                state=state, initial_prompt=self.initial_prompt
-            ))'''
         thoughts = self.model.generate_thoughts(
-                state=state, k=self.num_thoughts, initial_prompt=self.initial_prompt, max_steps=self.max_steps-last_step
+                state=state, k=self.num_thoughts, initial_prompt=self.initial_prompt, max_steps=self.max_steps, current_step=current_step-1
             )
         
+        state_node_count = self.get_node_number_from_state(state) if self.get_node_number_from_state(state) != None else self.nodeCount - 1
+        
         for thought in thoughts:
+            self.add_nodes_and_edge(state_node_count, False, state, self.nodeCount + 1, True, thought)
             # Check if thoughts for this state are cached
             cached_value = self.check_cache(state)
             if cached_value is not None:
                 print(colored(f"cached state: {state}, Cached value: {cached_value}", "cyan"))
-                thoughts.remove(thought)
-                #self.graph.add_edge(state, thought)
-            #else:  <-- probably need this here to avoid duplicate nodes and edges but Also not since we want to see ALL data produced and how it is processes    
-            self.graph.add_edge(state, thought)
+                thoughts.remove(thought) 
+            
+            
+            
             
         new_evaluations = self.model.evaluate_states(
-            states=thoughts, initial_prompt=self.initial_prompt, previous_score=last_score
+            states=thoughts, initial_prompt=self.initial_prompt, previous_score=last_score, current_step=current_step
         )
         self.evaluated_thoughts.update(new_evaluations)
             
@@ -302,3 +316,18 @@ class AoTAgent():
         
         return filtered_thoughts
     
+    def get_node_number_from_state(self, state):
+        for node_number, data in self.graph.nodes(data=True):
+            if data['state'] == state:
+                return node_number
+        return None  # return None if no matching node is found
+    
+    def add_nodes_and_edge(self, node1_number, increment1:bool, state1, node2_number, increment2: bool, state2):
+        # Check if nodes already exist
+        self.graph.add_node(node1_number, state=state1)
+        self.graph.add_node(node2_number, state=state2)
+        if increment1 or increment2:
+            self.nodeCount += 1
+            
+        # Add edge between nodes
+        self.graph.add_edge(node1_number, node2_number)

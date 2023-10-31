@@ -1,10 +1,9 @@
-# Modular Mind: a lite LLM Agent Framework
+# Modular Mind: an LLM Agent Framework
 ## **(IN PROGRESS)**
-### A lightweight and customizable agent framework 
+### The framework integrates a variety of advanced techniques, including efficient data retrieval methods, memory enhancements, strategic tool usage, and diverse agent prompting strategies. 
 
-![ALT TEXT](/images/Agent_framework.png)
-
+![ALT TEXT](/images/Modular_Mind.png)
 
 # Blocks: The building blocks of an agent
 ## Knowledge: Easily giving your agent a knowledge base.
-![ALT TEXT](/images/Knowledge_block.png)
+![ALT TEXT](/images/Knowledge.png)

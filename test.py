@@ -48,6 +48,7 @@ print(f"Solution: {solution}")'''
 
 #Algorithm of Thought test
 from framework.agents.AlgorithmOfThought.AoTAgent import AoTAgent
+#import openai
 
 task ='''If (A-B) = [1,5,7,8], (B-A) = [2,10], and (A∩B) = [3,6,9], Find the set B.'''
 """
@@ -76,6 +77,7 @@ NOVA_API_KEY = os.getenv('NOVA_API_KEY')
 HYPRLAB_API_KEY = os.getenv('HYPRLAB_API_KEY')
 OPEN_AI_BASE =  "https://api.hyprlab.io/v1" #'https://api.nova-oss.com/v1' #"https://api.naga.ac/v1" # #"https://thirdparty.webraft.in/v1" #"https://zukijourney.xyzbot.net/v1"  #"https://thirdparty.webraft.in/v1" # 
 NOVA_BASE = 'https://api.nova-oss.com/v1'
+WEBDRAFT_BASE = 'https://thirdparty.webraft.in/v1'
 
 
 
@@ -83,16 +85,19 @@ NOVA_BASE = 'https://api.nova-oss.com/v1'
 #openai.api_base = OPEN_AI_BASE
 
 dfs = AoTAgent(
-    model="gpt-4-32k",
+    model="gpt-3.5-turbo-16k",
     num_thoughts=2,
     max_steps=3,
     pruning_threshold=0.5,
-    value_threshold=0.8,
+    value_threshold=0.7,
     initial_prompt=task,
     api_base=OPEN_AI_BASE,
     api_key=HYPRLAB_API_KEY,
     valid_retry_count=1,
 )
+#openai.api_base = OPEN_AI_BASE
+#openai.api_key = HYPRLAB_API_KEY
+
 
 result = dfs.solve()
 print(result)

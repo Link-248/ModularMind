@@ -126,10 +126,10 @@ class OpenAI(ModelBase):
                         "\n" + "-----------" + "\n" + "Prompt : " + query + "\n"
                     )
                 return response["choices"][0]["message"]["content"]
-            except openai.error.RateLimitError as e:
-                sleep_duration = os.environ.get("OPENAI_RATE_TIMEOUT", 30)
+            except Exception as e:
+                sleep_duration = os.environ.get("OPENAI_RATE_TIMEOUT", 10)
                 print(
-                    f"{str(e)}, sleep for {sleep_duration}s, set it by env OPENAI_RATE_TIMEOUT"
+                    f"{str(e)}, sleeping for {sleep_duration}s and retrying..."
                 )
                 time.sleep(sleep_duration)
 

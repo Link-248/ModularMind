@@ -51,36 +51,35 @@ class AlgorithmModelProcesses(AbstractModelProcesses):
     def __init__(self, model_to_use: str = 'OpenAI'):
         self.LLM = model.Models.get_Model(model_to_use)
         
-    def generate_text(self, prompt: str, system_prompt:str = "", max_tokens: int = 1000, temperature: int = 0.5, k: int = 1) -> List[str]:
+    def generate_text(self, prompt: str, system_prompt:str = "", max_tokens: int = 1000, temperature: int = 0, k: int = 1) -> List[str]:
         thoughts = []
         for _ in range(k):
             response = self.LLM.run(system_prompt=system_prompt, query=prompt, max_tokens=max_tokens, temperature=temperature)
             thoughts += [response]
         return thoughts
 
-    def generate_thoughts(self, state: str, initial_prompt: str, k: int = 1, rejected_solutions=None, max_steps: int = 3) -> List[str]:
+    def generate_thoughts(self, state: str, initial_prompt: str, k: int = 1, rejected_solutions=None, max_steps: int = 3, current_step: int = 0) -> List[str]:
         if type(state) == str:
             state_text = state
         else:
             state_text = "\n".join(state)
         system_prompt = f"""
-        Please follow these steps to complete the task:
+        Follow these steps to complete the task:
 
-        1. Break down the task into {max_steps} subtasks and lay them out under ###PLAN###.
-        2. ONLY Generate the potential current step towards the solution under ###CURRENT STEP### and provide the step number.
-        3. If a step doesn't progress towards a solution, explore another path.
-        4. Provide the next step under ###NEXT STEP### needed to progress towards the solution. DO NOT PROVIDE A SOLUTION UNLESS THE ###CURRENT STEP### IS STEP {max_steps}
-
-        Remember, all tasks have solutions. Keep your responses concise and complete.
+        1. Break down the task into {max_steps} subtasks and lay them out under ###PLAN###. If a plan already exists, do not write it again.
+        2. ONLY Write step {current_step + 1} towards the solution under ###STEP {current_step + 1}###.
+        2. ONLY Write step {current_step + 1} towards the solution under ###STEP {current_step + 1}###. \n
+        DO NOT PROVIDE A FINAL SOLUTION UNLESS {current_step } IS {max_steps}
+        DO NOT PROVIDE A FINAL SOLUTION UNLESS {current_step } IS {max_steps}
+        DO NOT PROVIDE A FINAL SOLUTION UNLESS {current_step } IS {max_steps}
+        
         #####OBJECTIVE#####
         {initial_prompt}
         ###################
         """
-        prompt = f"""
-        ###CURRENT PROGRESS###
-        {state_text}
-    """
-        thoughts = self.generate_text(system_prompt=system_prompt, prompt=prompt, k=k)
+        prompt = state_text
+
+        thoughts = self.generate_text(system_prompt=system_prompt, temperature=1, prompt=prompt, k=k)
         return thoughts
 
     def generate_solution(self, initial_prompt: str, state: str, rejected_solutions=None) -> str:
@@ -110,7 +109,7 @@ class AlgorithmModelProcesses(AbstractModelProcesses):
             logging.error(colored(f"Error in generate_solutions: {e}", "red"))
             return None
 
-    def evaluate_states(self, states: List[str], initial_prompt: str, previous_score: float) -> Dict[str, float]:
+    def evaluate_states(self, states: List[str], initial_prompt: str, previous_score: float, current_step: int = 0) -> Dict[str, float]:
         if not states:
             return {}
 
@@ -122,13 +121,13 @@ class AlgorithmModelProcesses(AbstractModelProcesses):
                 else:
                     state_text = "\n".join(state)
                 prompt = f""" To achieve the following goal: '{initial_prompt}', 
-                    pessimistically value the latest generated state and it's reasoning towards the possible solution
+                    pessimistically value the latest generated state and it's accuracy towards the possible solution
                     AS A FLOAT BETWEEN 0 AND 1\n
+                    Evalute it higher if the last step X is equal to {current_step}. if the last step X is greater than {current_step}, rank it lower.\n
                     current state to the solution:\n\n
                     {state_text}\n
-                    
                     This was the previous score: {previous_score} of that state, 
-                    Only rate it higher than the previous score if it progresses farther towards the solution.\n  
+                    Only rate it higher than the previous score if it is the next step X towards the solution.\n  
                     Again evaluate the current state AS A FLOAT BETWEEN 0 and 1:\n,  DO NOT RETURN ANYTHING ELSE, JUST THE FLOAT
                 """
                 # If the solutions is not making fast progress in achieving the goal, give it a lower score.
