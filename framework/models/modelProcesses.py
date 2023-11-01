@@ -58,7 +58,7 @@ class AlgorithmModelProcesses(AbstractModelProcesses):
             thoughts += [response]
         return thoughts
 
-    def generate_thoughts(self, state: str, initial_prompt: str, k: int = 1, rejected_solutions=None, max_steps: int = 3, current_step: int = 0) -> List[str]:
+    def generate_thoughts(self, state: str, initial_prompt: str, k: int = 1, accepted_solutions = None, rejected_solutions=None, max_steps: int = 3, current_step: int = 0) -> List[str]:
         if type(state) == str:
             state_text = state
         else:
@@ -66,38 +66,45 @@ class AlgorithmModelProcesses(AbstractModelProcesses):
         system_prompt = f"""
         Follow these steps to complete the task:
 
-        1. Break down the task into {max_steps} subtasks and lay them out under ###PLAN###. If a plan already exists, do not write it again.
-        2. ONLY Write step {current_step + 1} towards the solution under ###STEP {current_step + 1}###.
-        2. ONLY Write step {current_step + 1} towards the solution under ###STEP {current_step + 1}###. \n
-        DO NOT PROVIDE A FINAL SOLUTION UNLESS {current_step } IS {max_steps}
-        DO NOT PROVIDE A FINAL SOLUTION UNLESS {current_step } IS {max_steps}
-        DO NOT PROVIDE A FINAL SOLUTION UNLESS {current_step } IS {max_steps}
+        1. Break down the task into {max_steps} subtasks and lay them out under ###PLAN###. DO NOT write it again if {current_step} is greater than 1.
+        2. Write step {current_step} towards solving the question under ###STEP {current_step}###. NOTHING MORE 
+        3. Write step {current_step} towards solving the question under ###STEP {current_step}###. NOTHING MORE 
+        4. Write step {current_step} towards solving the question under ###STEP {current_step}###. NOTHING MORE  
+        \n
+        DO NOT PROVIDE A FINAL SOLUTION UNLESS {current_step} IS EQUAL TO {max_steps}
+        DO NOT PROVIDE A FINAL SOLUTION UNLESS {current_step} IS EQUAL TO {max_steps}
+        DO NOT PROVIDE A FINAL SOLUTION UNLESS {current_step} IS EQUAL TO {max_steps}
         
         #####OBJECTIVE#####
         {initial_prompt}
-        ###################
+        ###################\n
+        ###PREVIOUS STATES###
+        {accepted_solutions}
+        ###CURRENT STATE####\n
+        {state_text}
         """
-        prompt = state_text
+        prompt = f"Generate step {current_step} towards the solution."
 
-        thoughts = self.generate_text(system_prompt=system_prompt, temperature=1, prompt=prompt, k=k)
+        thoughts = self.generate_text(system_prompt=system_prompt, prompt=prompt, temperature=1, k=k)
         return thoughts
 
-    def generate_solution(self, initial_prompt: str, state: str, rejected_solutions=None) -> str:
+    #Need to add in previous best steps per stage, so highest value per stage and give it here to generate the solution.
+    def generate_solution(self, initial_prompt: str, best_steps, rejected_solutions=None) -> str:
         try:
-            if isinstance(state, list):
+            '''if isinstance(state, list):
                 state_text = "\n".join(state)
             else:
-                state_text = state
+                state_text = state'''
 
             prompt = f"""
             Generate a solution to comply with the user's instructions, 
             you must generate a solution on the basis of determining the most reliable solution in the shortest amount of time, 
             while taking rejected solutions into account and learning from them. 
             Considering the reasoning provided:\n\n
-            ###'{state_text}'\n\n###
-            Devise the best possible solution for the task: {initial_prompt}, Here are evaluated solutions that were rejected: 
-            ###{rejected_solutions}###, 
-            Give the solution without making the same mistakes you did with the evaluated rejected solutions. 
+            ###'{best_steps}'###\n\n
+            Devise the best possible solution for the task: {initial_prompt}, Here are evaluated steps that were rejected: 
+            ###{rejected_solutions}###\n\n
+            Give the solution without making the same mistakes you did with the evaluated rejected steps. 
             Be simple. Be direct. Provide intuitive solutions as soon as you think of them."""
            
             answer = self.generate_text(prompt=prompt, max_tokens=2048, temperature=0)
@@ -109,7 +116,7 @@ class AlgorithmModelProcesses(AbstractModelProcesses):
             logging.error(colored(f"Error in generate_solutions: {e}", "red"))
             return None
 
-    def evaluate_states(self, states: List[str], initial_prompt: str, previous_score: float, current_step: int = 0) -> Dict[str, float]:
+    def evaluate_states(self, states: List[str], initial_prompt: str, previous_score: float, current_step: int = 0, previous_best_thoughts = None) -> Dict[str, float]:
         if not states:
             return {}
 
@@ -121,21 +128,22 @@ class AlgorithmModelProcesses(AbstractModelProcesses):
                 else:
                     state_text = "\n".join(state)
                 prompt = f""" To achieve the following goal: '{initial_prompt}', 
-                    pessimistically value the latest generated state and it's accuracy towards the possible solution
-                    AS A FLOAT BETWEEN 0 AND 1\n
-                    Evalute it higher if the last step X is equal to {current_step}. if the last step X is greater than {current_step}, rank it lower.\n
+                    pessimistically value the latest generated step and it's accuracy
+                    AS A FLOAT BETWEEN 0 AND 100.\n
+                    If this state has another step that is not step {current_step} in it at once, rank it lower. Having a PLAN is NOT BAD\n
                     current state to the solution:\n\n
                     {state_text}\n
-                    This was the previous score: {previous_score} of that state, 
-                    Only rate it higher than the previous score if it is the next step X towards the solution.\n  
-                    Again evaluate the current state AS A FLOAT BETWEEN 0 and 1:\n,  DO NOT RETURN ANYTHING ELSE, JUST THE FLOAT
+                    {previous_score} was the previous score of the last state this step branches from, 
+                    ###{previous_best_thoughts}### are the previous best state,
+                    Only rate it higher than the previous score if it is step {current_step} towards the solution.\n  
+                    Again evaluate the current state AS A FLOAT BETWEEN 0 and 100:\n,  DO NOT RETURN ANYTHING ELSE, JUST THE FLOAT
                 """
                 # If the solutions is not making fast progress in achieving the goal, give it a lower score.
                 response = self.LLM.run(query=prompt, max_tokens=10, temperature=1)
                 match = re.search(r'[-+]?[0-9]*\.?[0-9]+', response)
                 if match:
                     value = float(match.group())
-                    print(colored(f"Evaluated Thought Value: {value} with context being {state_text}", "green"))
+                    print(colored(f"Evaluated Thought Value: {value} at step: {current_step} with context being {state_text}", "green"))
                     state_values[state] = value
                 else:
                     print(colored(f"No float value found in response: {response}", "red"))

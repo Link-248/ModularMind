@@ -50,8 +50,7 @@ print(f"Solution: {solution}")'''
 from framework.agents.AlgorithmOfThought.AoTAgent import AoTAgent
 #import openai
 
-task ='''If (A-B) = [1,5,7,8], (B-A) = [2,10], and (A∩B) = [3,6,9], Find the set B.'''
-"""
+task ="""
 Laird: Pure research provides us with new technologies that contribute to saving lives. Even more worthwhile than this, however, is its role in expanding our knowledge and providing new, unexplored ideas.
 
 Kim: Your priorities are mistaken. Saving lives is what counts most of all. Without pure research, medicine would not be as advanced as it is.
@@ -63,7 +62,12 @@ B) expands the boundaries of our knowledge of medicine
 C) should have the saving of human lives as an important goal
 D) has its most valuable achievements in medical applications
 E) has any value apart from its role in providing new technologies to save lives
+
+chose one of the options.
 """
+
+'''If (A-B) = [1,5,7,8], (B-A) = [2,10], and (A∩B) = [3,6,9], Find the set B.'''
+
 import os
 from dotenv import load_dotenv
 
@@ -88,8 +92,8 @@ dfs = AoTAgent(
     model="gpt-3.5-turbo-16k",
     num_thoughts=2,
     max_steps=3,
-    pruning_threshold=0.5,
-    value_threshold=0.7,
+    pruning_threshold=50,
+    value_threshold=80,
     initial_prompt=task,
     api_base=OPEN_AI_BASE,
     api_key=HYPRLAB_API_KEY,

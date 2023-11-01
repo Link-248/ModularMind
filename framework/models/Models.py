@@ -77,11 +77,11 @@ class OpenAI(ModelBase):
             temperature=temperature,
             stream=self.stream,
             max_tokens=max_tokens,) 
-        with open("openai.logs", "a", encoding='utf-8') as log_file:
+        '''with open("openai.logs", "a", encoding='utf-8') as log_file:
                     log_file.write(
                         "\n" + "-----------" + "\n" + "System Prompt : " + system_prompt + "\n" +
                         "\n" + "-----------" + "\n" + "Prompt : " + query + "\n"
-                    )
+                    )'''
         if(self.stream):
             tokens_used = 0
             responses = ''
@@ -120,16 +120,16 @@ class OpenAI(ModelBase):
                     max_tokens=max_tokens,
                     temperature=temperature
                     )
-                with open("openai.logs", "a", encoding='utf-8') as log_file:
+                '''with open("openai.logs", "a", encoding='utf-8') as log_file:
                     log_file.write(
                         "\n" + "-----------" + "\n" + "System Prompt : " + system_prompt + "\n" +
                         "\n" + "-----------" + "\n" + "Prompt : " + query + "\n"
-                    )
+                    )'''
                 return response["choices"][0]["message"]["content"]
             except Exception as e:
                 sleep_duration = os.environ.get("OPENAI_RATE_TIMEOUT", 10)
                 print(
-                    f"{str(e)}, sleeping for {sleep_duration}s and retrying..."
+                    f"ERROR, sleeping for {sleep_duration}s and retrying..."
                 )
                 time.sleep(sleep_duration)
 

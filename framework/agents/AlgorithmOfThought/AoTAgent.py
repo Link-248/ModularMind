@@ -5,8 +5,8 @@ from termcolor import colored
 
 import networkx as nx
 import matplotlib.pyplot as plt
-import pygraphviz
-
+import pygraphviz as pgv
+from networkx.drawing.nx_agraph import graphviz_layout
 
 import logging
 import traceback
@@ -124,38 +124,30 @@ class AoTAgent():
         self.model.LLM.set_api_info(base_api_key=api_key, base_url=api_base)
         self.model.LLM.model = model
         
-        self.best_state = None
-        self.best_value = float('-inf')
-        self.best_state_node = None
-        
         self.valid_retry_count = valid_retry_count
-        self.results = []
         self.evaluated_thoughts = {}
         self.last_state = ""
         self.nodeCount = 0
         self.graph = nx.DiGraph()  # Add this line to initialize the graph
+        
+        
+        self.best_thoughts = {} # A dictionary to store the best thoughts per step
+        self.state_stack = []
 
     def solve(self) -> str:
         """Solve the problem using AoT prompt and dfs search algorithm"""
         try:
             self.last_state = self.initial_prompt
-            
+            self.graph.add_node(0, state=self.initial_prompt, color='blue')
             #self.graph.add_node(self.nodeCount, state=self.initial_prompt)
             #self.nodeCount += 1
             # Run DFS
             self.dfs(self.initial_prompt, 1)
 
-            # Find the best thought and its value
-            if(not self.results):
-                print(colored(f"results: {self.results}", "green"))
-                best_state, best_value = max(self.results, key=lambda x: x[1])
-            elif(not self.best_state):
-                best_state = self.best_state
-            else:
-                best_state = self.initial_prompt
-
+            self.get_best_thoughts_per_step()
+            
             # Generate the final solution based on the best thought
-            solution = self.model.generate_solution(initial_prompt=self.initial_prompt, state=best_state, rejected_solutions=self.thought_cache["pruned"])
+            solution = self.model.generate_solution(initial_prompt=self.initial_prompt, best_steps=self.best_thoughts, rejected_solutions=self.thought_cache["pruned"])
 
             # Display and return the solution
             logger.info(f"Solution is {solution}")
@@ -167,14 +159,18 @@ class AoTAgent():
             # Draw the graph at the end of the solve method
            # pos = nx.spring_layout(self.graph, scale=10)  # This will calculate the positions of the nodes
             print(self.graph.edges(data=True))
-           # labels = {node: data['state'] for node, data in self.graph.nodes(data=True)}
-            T = nx.dfs_tree(self.graph, source=0)  # This will create a tree from the graph
-            pos = nx.drawing.nx_agraph.graphviz_layout(T, prog='dot')
+            #labels = {node: data['state'] for node, data in self.graph.nodes(data=True)}
+            #T = nx.dfs_tree(self.graph, source=0)  # This will create a tree from the graph
+            nodes = self.graph.nodes(data=True)
+            node_colors = [node['color'] for _, node in nodes]
+            edges = self.graph.edges(data=True)
+            edge_colors = [edge['color'] for _, _, edge in edges]
+            pos = graphviz_layout(self.graph, prog='dot')
             try:
-                nx.draw(T, pos, with_labels=True, arrows=True)   
+                nx.draw(self.graph, pos, with_labels=True, arrows=True, node_color=node_colors, edge_color=edge_colors)   
                 plt.show() 
             except Exception as e :
-                print(e)
+                print(e) 
             ''' try:
                 nx.draw(self.graph, labels=labels, with_labels=True)
                 plt.show()
@@ -195,104 +191,103 @@ class AoTAgent():
     def check_cache(self, state: str) -> float:
         """Check if the state is in the cache and return the corresponding value"""
         if state in self.thought_cache["accepted"]:
-            value = self.thought_cache["accepted"][state]
-            print(f"Retrieved accepted thought value from cache: {value}")
+            value = self.thought_cache["accepted"][state]["value"]
+            #print(f"Retrieved accepted thought value from cache: {value}")
         elif state in self.thought_cache["pruned"]:
             value = 0  # or whatever value you use for pruned thoughts
-            print(f"Retrieved pruned thought value from cache: {value}")
+            #print(f"Retrieved pruned thought value from cache: {value}")
         else:
             value = None
         return value
-
+            
     def dfs(self, state: str, step: int) -> None:
         """Depth-first search algorithm"""
         if step > self.max_steps:
-            value = self.check_cache(state)
-            if value is not None or 0:
-                self.results.append((state, value))
             return
-
+        
+        state_node_count = self.get_node_number_from_state(state) if self.get_node_number_from_state(state) != None else self.nodeCount
         retry_count = 0
+        
+        # Push the current state onto the stack
+        self.state_stack.append(state)
+    
         while retry_count < self.valid_retry_count:
             last_state_value = self.evaluated_thoughts.get(state) if state in self.evaluated_thoughts else None
-            thoughts = self.generate_and_filter_thoughts(state=state, last_score=last_state_value, last_step=step, last_state=self.last_state, current_step=step)
+            thoughts = self.generate_and_filter_thoughts(state=state, last_score=last_state_value, current_step=step)
             # Check if any thought has a value above the threshold
             if any(self.evaluated_thoughts[thought] > self.value_threshold for thought in thoughts):
                 break
             retry_count += 1
-        if not thoughts:
-            self.last_state = state
-            self.dfs(state=state, step=step + 1)
-        
+            
         print(colored("Step: " + str(step), "red"))
         for next_state in thoughts:
-            print(colored(f"Next state val: {self.evaluated_thoughts.get(next_state)}, next state: {next_state}", "cyan"))
-            if(next_state in self.evaluated_thoughts):
-                next_state_value = self.evaluated_thoughts.get(next_state)
-            else:
-                print("ERROR: next_state not in evaluated_thoughts")
-                continue
-            #logger.info(f"Entering DFS with state: {next_state} and step: {step}")
-            print(f"Entering DFS with state: {next_state} and step: {step}")
-            
+            next_state_value = self.evaluated_thoughts.get(next_state)
+                
             # check thoughts less than the value threshold and cache pruned thoughts 
             if next_state_value <= self.value_threshold:
                 self.thought_cache["pruned"][next_state] = next_state_value
-                if next_state in self.evaluated_thoughts:
-                    del self.evaluated_thoughts[next_state]
+                if next_state in self.thought_cache["accepted"]:
+                    del self.thought_cache["accepted"][next_state]
+                    
                 print(colored(f"Pruned thought under {self.value_threshold}: value: {next_state_value}", "red"))  
-                        
-            
-            if self.evaluated_thoughts:
-                best_state, best_value = max(self.evaluated_thoughts.items(), key=lambda item: item[1])
-                best_state_nodeCount = self.get_node_number_from_state(best_state)
-                print(colored(f"Best state: {best_state}, best value: {best_value}", "red"))
-                #backtracking
-                if best_value > next_state_value:
-                    print(colored(f"Backtracking to: {best_state}", "yellow"))
-                    if next_state in self.evaluated_thoughts:
-                        del self.evaluated_thoughts[next_state]
-                    child = best_state
-                    self.add_nodes_and_edge(self.get_node_number_from_state(next_state), False, next_state, 
-                                            best_state_nodeCount, False, best_state)
-                    self.nodeCount = best_state_nodeCount
-                else: 
-                    print(colored(f"continue with {next_state}", "yellow")) 
-                    child = next_state
-                    self.add_nodes_and_edge(self.get_node_number_from_state(state), False, state, 
-                                            self.get_node_number_from_state(next_state), False, next_state)
-            else:
-                child = state
-                self.add_nodes_and_edge(self.get_node_number_from_state(next_state), False, next_state, 
-                                        self.get_node_number_from_state(state), False, state)
-                  
+                # Add the pruned thought to the graph with a different color
+                self.nodeCount += 1
+                self.graph.add_node(self.nodeCount, state=next_state, color='red')
+                self.graph.add_edge(state_node_count, self.nodeCount, color='black')
                 
-               
-            if step <= self.max_steps:
-                self.last_state = state
-                self.dfs(state=child, step=step + 1)
+                # Add a backtracking edge to the graph
+                if step > 0:  # Don't add a backtracking edge for the root node
+                    previous_state = self.state_stack[-1]  # Get the state to backtrack to from the stack
+                    self.graph.add_edge(self.get_node_number_from_state(next_state), self.get_node_number_from_state(previous_state), color='red')  # Add a backtracking edge
+                        
+                    # Pop the current state from the stack
+                    self.state_stack.pop()
+                child = previous_state
+                
+            else:           
+                # Explore the next state
+                next_state_node_count = self.get_node_number_from_state(next_state) 
+                if next_state_node_count == self.nodeCount:
+                    next_state_node_count += 1
+                self.add_nodes_and_edge(state_node_count, False, state, 
+                                        next_state_node_count, True, next_state)
+                child = next_state
+            self.dfs(child, step + 1)
+        if (not thoughts):
+            self.dfs(state, step + 1)
+            
 
-    def generate_and_filter_thoughts(self, state: str, last_score: float, last_step:int, last_state: str, current_step: int) -> List[str]:
+    def generate_and_filter_thoughts(self, state: str, last_score: float, current_step: int) -> List[str]:
         """Generate and filter thoughts"""
+        state_node_count = self.get_node_number_from_state(state) if self.get_node_number_from_state(state) != None else self.nodeCount
+
+        self.last_state = state
+        
         thoughts = self.model.generate_thoughts(
-                state=state, k=self.num_thoughts, initial_prompt=self.initial_prompt, max_steps=self.max_steps, current_step=current_step-1
+                state=state, k=self.num_thoughts, initial_prompt=self.initial_prompt, accepted_solutions=self.thought_cache["accepted"], max_steps=self.max_steps, current_step=current_step
             )
-        
-        state_node_count = self.get_node_number_from_state(state) if self.get_node_number_from_state(state) != None else self.nodeCount - 1
-        
-        for thought in thoughts:
-            self.add_nodes_and_edge(state_node_count, False, state, self.nodeCount + 1, True, thought)
+        #print(thoughts)
+        for thought in thoughts.copy():
+            #self.add_nodes_and_edge(state_node_count, False, state, self.nodeCount + 1, True, thought)
             # Check if thoughts for this state are cached
-            cached_value = self.check_cache(state)
+            cached_value = self.check_cache(thought)
             if cached_value is not None:
-                print(colored(f"cached state: {state}, Cached value: {cached_value}", "cyan"))
-                thoughts.remove(thought) 
-            
-            
-            
-            
+                print(colored(f"cached state: {thought}, Cached value: {cached_value}", "cyan"))
+                existing_node_number = self.get_node_number_from_state(thought)
+                if existing_node_number is not None:
+                    node_number = existing_node_number
+                else:
+                    self.nodeCount += 1
+                    node_number = self.nodeCount
+                self.graph.add_node(node_number, state=thought, color='purple')
+                self.graph.add_edge(state_node_count, node_number, color='purple')
+                thoughts.remove(thought)
+                
+        self.get_best_thoughts_per_step_no_nodes()
+        
         new_evaluations = self.model.evaluate_states(
-            states=thoughts, initial_prompt=self.initial_prompt, previous_score=last_score, current_step=current_step
+            states=thoughts, initial_prompt=self.initial_prompt, previous_score=last_score, current_step=current_step, 
+            previous_best_thoughts=self.best_thoughts
         )
         self.evaluated_thoughts.update(new_evaluations)
             
@@ -303,13 +298,19 @@ class AoTAgent():
         ]
 
         # Cache the filtered thoughts
+        # Cache the filtered thoughts
         for thought in filtered_thoughts:
-            self.thought_cache["accepted"][str(thought)] = self.evaluated_thoughts[thought]
-
+            self.thought_cache["accepted"][str(thought)] = {"value": self.evaluated_thoughts[thought], "step": current_step}
+        #print(self.thought_cache["accepted"].items())
         for thought in thoughts:
             if self.evaluated_thoughts[thought] < self.pruning_threshold:
                 self.thought_cache["pruned"][str(thought)] = self.evaluated_thoughts[thought]
                 print(colored(f"Pruned thought under {self.pruning_threshold}: value: {thought}", "red"))
+                
+                # Add the pruned thought to the graph with a different color
+                self.nodeCount += 1
+                self.graph.add_node(self.get_node_number_from_state(thought), state=thought, color='red')
+                self.graph.add_edge(state_node_count, self.nodeCount, color='black')
 
         #logger.info(colored(f"filtered_thoughts: {filtered_thoughts}", "yellow"))
         #print(colored(f"filtered_thoughts: {filtered_thoughts}", "yellow"))
@@ -318,16 +319,35 @@ class AoTAgent():
     
     def get_node_number_from_state(self, state):
         for node_number, data in self.graph.nodes(data=True):
-            if data['state'] == state:
+            if 'state' in data and data['state'] == state:
                 return node_number
-        return None  # return None if no matching node is found
+        return self.nodeCount  
     
     def add_nodes_and_edge(self, node1_number, increment1:bool, state1, node2_number, increment2: bool, state2):
         # Check if nodes already exist
-        self.graph.add_node(node1_number, state=state1)
-        self.graph.add_node(node2_number, state=state2)
+        self.graph.add_node(node1_number, state=state1, color='blue')
+        self.graph.add_node(node2_number, state=state2, color='blue')
         if increment1 or increment2:
             self.nodeCount += 1
             
         # Add edge between nodes
-        self.graph.add_edge(node1_number, node2_number)
+        self.graph.add_edge(node1_number, node2_number, color='black')
+        
+    def get_best_thoughts_per_step(self):
+        for thought, data in self.thought_cache["accepted"].items():
+            step = data["step"]
+            value = data["value"]
+            if step not in self.best_thoughts or value > self.best_thoughts[step]["value"]:
+                self.best_thoughts[step] = {"thought": thought, "value": value}
+
+        # Change the color of the nodes that represent the best thoughts
+        for node, data in self.graph.nodes(data=True):
+            if 'state' in data and data['state'] in (item["thought"] for item in self.best_thoughts.values()):
+                data['color'] = 'green'  # Change the color to green
+                
+    def get_best_thoughts_per_step_no_nodes(self):
+        for thought, data in self.thought_cache["accepted"].items():
+            step = data["step"]
+            value = data["value"]
+            if step not in self.best_thoughts or value > self.best_thoughts[step]["value"]:
+                self.best_thoughts[step] = {"thought": thought, "value": value}
