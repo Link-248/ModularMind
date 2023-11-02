@@ -231,9 +231,12 @@ class AoTAgent():
                     
                 print(colored(f"Pruned thought under {self.value_threshold}: value: {next_state_value}", "red"))  
                 # Add the pruned thought to the graph with a different color
-                self.nodeCount += 1
-                self.graph.add_node(self.nodeCount, state=next_state, color='red')
-                self.graph.add_edge(state_node_count, self.nodeCount, color='black')
+                next_state_node_count = self.get_node_number_from_state(next_state)
+                if next_state_node_count == self.nodeCount:
+                    next_state_node_count += 1
+                    self.nodeCount += 1
+                self.graph.add_node(next_state_node_count, state=next_state, color='red')
+                self.graph.add_edge(state_node_count, next_state_node_count, color='black')
                 
                 # Add a backtracking edge to the graph
                 if step > 0:  # Don't add a backtracking edge for the root node
@@ -277,8 +280,9 @@ class AoTAgent():
                 if existing_node_number is not None:
                     node_number = existing_node_number
                 else:
-                    self.nodeCount += 1
-                    node_number = self.nodeCount
+                    raise Exception("Node number not found")
+                    #self.nodeCount += 1
+                    #node_number = self.nodeCount
                 self.graph.add_node(node_number, state=thought, color='purple')
                 self.graph.add_edge(state_node_count, node_number, color='purple')
                 thoughts.remove(thought)
@@ -306,11 +310,13 @@ class AoTAgent():
             if self.evaluated_thoughts[thought] < self.pruning_threshold:
                 self.thought_cache["pruned"][str(thought)] = self.evaluated_thoughts[thought]
                 print(colored(f"Pruned thought under {self.pruning_threshold}: value: {thought}", "red"))
-                
+                thought_node_count = self.get_node_number_from_state(thought)
+                if thought_node_count == self.nodeCount:
+                    thought_node_count += 1
+                    self.nodeCount += 1
                 # Add the pruned thought to the graph with a different color
-                self.nodeCount += 1
-                self.graph.add_node(self.get_node_number_from_state(thought), state=thought, color='red')
-                self.graph.add_edge(state_node_count, self.nodeCount, color='black')
+                self.graph.add_node(thought_node_count, state=thought, color='red')
+                self.graph.add_edge(state_node_count, thought_node_count, color='black')
 
         #logger.info(colored(f"filtered_thoughts: {filtered_thoughts}", "yellow"))
         #print(colored(f"filtered_thoughts: {filtered_thoughts}", "yellow"))

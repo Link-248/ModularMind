@@ -89,7 +89,7 @@ WEBDRAFT_BASE = 'https://thirdparty.webraft.in/v1'
 #openai.api_base = OPEN_AI_BASE
 
 dfs = AoTAgent(
-    model="gpt-3.5-turbo-16k",
+    model="gpt-4",
     num_thoughts=2,
     max_steps=3,
     pruning_threshold=50,

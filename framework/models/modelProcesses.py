@@ -134,7 +134,7 @@ class AlgorithmModelProcesses(AbstractModelProcesses):
                     current state to the solution:\n\n
                     {state_text}\n
                     {previous_score} was the previous score of the last state this step branches from, 
-                    ###{previous_best_thoughts}### are the previous best state,
+                    ###{previous_best_thoughts}### are the previous best states/steps,
                     Only rate it higher than the previous score if it is step {current_step} towards the solution.\n  
                     Again evaluate the current state AS A FLOAT BETWEEN 0 and 100:\n,  DO NOT RETURN ANYTHING ELSE, JUST THE FLOAT
                 """
