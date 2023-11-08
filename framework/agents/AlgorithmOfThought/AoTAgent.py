@@ -1,4 +1,4 @@
-from framework.models.modelProcesses import AlgorithmModelProcesses
+from framework.agents.AlgorithmOfThought.modelProcesses import AlgorithmModelProcesses
 import json
 from typing import List, Dict, Any, Tuple
 from termcolor import colored

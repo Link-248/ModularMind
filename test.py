@@ -90,8 +90,8 @@ WEBDRAFT_BASE = 'https://thirdparty.webraft.in/v1'
 
 dfs = AoTAgent(
     model="gpt-4",
-    num_thoughts=2,
-    max_steps=3,
+    num_thoughts=1,
+    max_steps=1,
     pruning_threshold=50,
     value_threshold=80,
     initial_prompt=task,
