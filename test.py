@@ -50,7 +50,10 @@ print(f"Solution: {solution}")'''
 from framework.agents.AlgorithmOfThought.AoTAgent import AoTAgent
 #import openai
 
-task ="""
+task =''' It takes 3 hours to dry 3 shirts, How long would it take to dry 9 shirts?'''
+
+'''If (A-B) = [1,5,7,8], (B-A) = [2,10], and (A∩B) = [3,6,9], Find the set B.'''
+"""
 Laird: Pure research provides us with new technologies that contribute to saving lives. Even more worthwhile than this, however, is its role in expanding our knowledge and providing new, unexplored ideas.
 
 Kim: Your priorities are mistaken. Saving lives is what counts most of all. Without pure research, medicine would not be as advanced as it is.
@@ -66,7 +69,7 @@ E) has any value apart from its role in providing new technologies to save lives
 chose one of the options.
 """
 
-'''If (A-B) = [1,5,7,8], (B-A) = [2,10], and (A∩B) = [3,6,9], Find the set B.'''
+
 
 import os
 from dotenv import load_dotenv
@@ -89,9 +92,9 @@ WEBDRAFT_BASE = 'https://thirdparty.webraft.in/v1'
 #openai.api_base = OPEN_AI_BASE
 
 dfs = AoTAgent(
-    model="gpt-4",
-    num_thoughts=1,
-    max_steps=1,
+    model="gpt-4-1106-preview",
+    num_thoughts=2,
+    max_steps=3,
     pruning_threshold=50,
     value_threshold=80,
     initial_prompt=task,

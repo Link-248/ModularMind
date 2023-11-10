@@ -239,7 +239,7 @@ class AoTAgent():
                 self.graph.add_edge(state_node_count, next_state_node_count, color='black')
                 
                 # Add a backtracking edge to the graph
-                if step > 0:  # Don't add a backtracking edge for the root node
+                if step > 0 and len(self.state_stack) > 0:  # Don't add a backtracking edge for the root node
                     previous_state = self.state_stack[-1]  # Get the state to backtrack to from the stack
                     self.graph.add_edge(self.get_node_number_from_state(next_state), self.get_node_number_from_state(previous_state), color='red')  # Add a backtracking edge
                         
