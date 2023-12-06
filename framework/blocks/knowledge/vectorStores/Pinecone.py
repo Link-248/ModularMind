@@ -28,6 +28,7 @@ class Pinecone():
                                     )
         # connect to index
         self.index = pinecone.Index(index_name)
+        print(f"Connected to index: {index_name}")
     
     # upsert embeddings from a dictionary of {content: embeddings} key value pairs
     def upsert_embeddings_from_dict(self, dict: dict, metadata_name: str = 'content'):

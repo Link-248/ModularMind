@@ -27,6 +27,7 @@ class OpenAIEmbeddings(ABC):
             openai.api_key =  base_api_key
         else:
             openai.api_key = base_api_key
+        
     
     def get_embedding(self, text, model: str ='text-embedding-ada-002'):
         # create embeddings (try-except added to avoid RateLimitError)
@@ -50,6 +51,7 @@ class TextEmbeddings(OpenAIEmbeddings):
     
     def __init__(self, base_api_key, model: str = "text-embedding-ada-002", base_url :str = 'https://api.openai.com/v1', useOpenAIBase: bool = True):
         super().__init__(base_api_key, model, base_url, useOpenAIBase)
+        print("TextEmbeddings initialized")
     
     # Convert a [topic, content] CSV file to a [topic, content, embeddings] CSV file 
     def preset_csv_to_embeds_csv(self, data_path: str, output_path: str, model: str ='text-embedding-ada-002'):
